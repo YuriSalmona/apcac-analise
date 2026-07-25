@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>APCAC — Está dentro? | Instituto Cerrados</title>
+<meta name="description" content="Ferramenta de análise: verifica se um local está dentro de uma Área Prioritária para Conservação de Água do Cerrado (APCAC) e detalha a classe, o risco e a ação recomendada.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Londrina+Solid:wght@400&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css">
+<style>
+:root{
+  --verde:#004F23; --verde2:#0a6b34; --bege:#DDCCA4; --bege-cl:#f4f1ea;
+  --preto:#1a1a1a; --laranja:#E85718; --cinza:#5f5f5f; --linha:#e4e0d4;
+  --tit:'Londrina Solid',cursive; --corpo:'Montserrat',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:var(--corpo);color:var(--preto);background:var(--bege-cl);font-size:15px;-webkit-font-smoothing:antialiased;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+a{color:var(--verde)}
+/* header */
+header{background:var(--verde);color:#fff;padding:10px 20px;display:flex;align-items:center;gap:16px;flex:0 0 auto;box-shadow:0 2px 10px rgba(0,0,0,.15);z-index:1200}
+header .brand{font-family:var(--tit);letter-spacing:.06em;font-size:20px;line-height:1}
+header .brand small{display:block;font-family:var(--corpo);font-weight:600;letter-spacing:.22em;font-size:10px;color:var(--bege);margin-top:3px}
+header .ttl{font-family:var(--tit);font-size:22px;color:#fff;flex:1}
+header .ttl b{color:var(--laranja)}
+header .lnk{font-size:12px;color:#cfe0d4;text-decoration:none;border:1px solid rgba(255,255,255,.35);padding:6px 12px;border-radius:6px}
+header .lnk:hover{background:rgba(255,255,255,.1)}
+/* layout */
+.main{flex:1 1 auto;display:grid;grid-template-columns:340px 1fr 420px;min-height:0}
+.panel{background:#fff;overflow-y:auto;border-right:1px solid var(--linha)}
+#map{height:100%;background:#dfe7e3}
+.results{border-right:none;border-left:1px solid var(--linha);background:#fff}
+.pad{padding:18px}
+h2.sec{font-family:var(--tit);color:var(--verde);font-size:19px;margin:0 0 4px}
+.hint{color:var(--cinza);font-size:12.5px;line-height:1.5;margin:0 0 14px}
+.card{border:1px solid var(--linha);border-radius:10px;padding:14px;margin-bottom:14px;background:#fff}
+.card h3{font-family:var(--tit);color:var(--verde);font-size:16px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+.card h3 .n{background:var(--verde);color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-family:var(--corpo);font-weight:700;font-size:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;background:var(--verde);color:#fff;border:none;font-family:var(--corpo);font-weight:600;font-size:14px;padding:11px 14px;border-radius:8px;cursor:pointer;transition:.15s}
+.btn:hover{background:var(--verde2)}
+.btn.orange{background:var(--laranja)} .btn.orange:hover{filter:brightness(1.08)}
+.btn.ghost{background:#fff;color:var(--verde);border:1.5px solid var(--verde)}
+.btn.ghost:hover{background:var(--bege-cl)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn+.btn{margin-top:8px}
+.dz{border:2px dashed var(--bege);border-radius:10px;padding:20px 14px;text-align:center;color:var(--cinza);font-size:13px;cursor:pointer;transition:.15s;background:var(--bege-cl)}
+.dz:hover,.dz.drag{border-color:var(--laranja);background:#fff}
+.dz b{color:var(--verde)}
+.sep{display:flex;align-items:center;gap:10px;color:var(--cinza);font-size:12px;margin:16px 0;text-transform:uppercase;letter-spacing:.1em}
+.sep::before,.sep::after{content:"";flex:1;height:1px;background:var(--linha)}
+.scaletabs{display:flex;gap:6px;margin:0 0 10px}
+.scaletabs button{flex:1;border:1px solid var(--linha);background:#fff;color:var(--cinza);font-family:var(--corpo);font-weight:600;font-size:12px;padding:7px 4px;border-radius:7px;cursor:pointer}
+.scaletabs button.on{background:var(--verde);color:#fff;border-color:var(--verde)}
+.status{font-size:12px;color:var(--cinza);padding:8px 10px;background:var(--bege-cl);border-radius:7px;margin-top:8px;min-height:18px}
+.status.err{color:#a12; background:#fbece7}
+/* results */
+.res-empty{color:var(--cinza);font-size:13.5px;line-height:1.6;text-align:center;padding:40px 10px}
+.res-empty .big{font-family:var(--tit);color:var(--verde);font-size:26px;display:block;margin-bottom:8px}
+.verdict{border-radius:12px;padding:16px 16px 14px;color:#fff;margin-bottom:16px}
+.verdict .lbl{font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;opacity:.85}
+.verdict .big{font-family:var(--tit);font-size:30px;line-height:1.05;margin:4px 0 6px}
+.verdict .sub{font-size:13px;line-height:1.5;opacity:.95}
+.scalecard{border:1px solid var(--linha);border-radius:10px;padding:12px 12px 10px;margin-bottom:12px}
+.scalecard .st{font-family:var(--tit);color:var(--verde);font-size:14px;letter-spacing:.02em;margin:0 0 8px;text-transform:uppercase}
+.classrow{display:flex;align-items:center;gap:10px;margin-bottom:7px}
+.sw{width:26px;height:26px;border-radius:6px;flex:0 0 auto;border:1px solid rgba(0,0,0,.15)}
+.classrow .cinfo{flex:1;min-width:0}
+.classrow .cprio{font-weight:700;font-size:13px}
+.classrow .cmeta{font-size:11.5px;color:var(--cinza);line-height:1.35}
+.classrow .cpct{font-weight:700;font-size:13px;color:var(--verde)}
+.bar{height:12px;border-radius:6px;overflow:hidden;display:flex;margin:2px 0 4px;border:1px solid rgba(0,0,0,.08)}
+.bar span{height:100%;width:0;transition:width 1s cubic-bezier(.2,.75,.25,1)}
+.texto{font-size:13.5px;line-height:1.72;color:#222;text-align:justify}
+.texto p{margin:0 0 12px}
+.texto h4{font-family:var(--tit);color:var(--verde);font-size:16px;margin:16px 0 6px}
+.callout{background:var(--bege-cl);border-left:3px solid var(--laranja);border-radius:0 8px 8px 0;padding:12px 14px;font-size:13px;line-height:1.65;color:#333;margin:14px 0}
+.callout b{color:var(--verde)}
+.foot{font-size:11px;color:var(--cinza);border-top:1px solid var(--linha);padding-top:10px;margin-top:14px;line-height:1.5}
+.dlbtns{display:flex;gap:8px;margin-top:8px}
+.dlbtns .btn{margin-top:0}
+/* leaflet legend — padrão do webmap APCAC */
+.leg{background:#fff;padding:10px 12px;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,.18);font-size:11px;line-height:1.4;width:232px;max-height:62vh;overflow:auto}
+.leg .lt{font-family:var(--tit);color:var(--verde);font-size:12.5px;letter-spacing:.02em;margin-bottom:2px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.leg .lt .cx{color:var(--cinza);font-family:var(--corpo);font-weight:700;font-size:13px}
+.leg .lsub{color:var(--cinza);font-size:9.5px;margin-bottom:8px}
+.leg .grp{margin-bottom:8px}
+.leg .gh{display:flex;align-items:center;gap:6px;font-weight:700;color:#1f1f1f;font-size:11px;line-height:1.2}
+.leg .gh .gc{width:12px;height:12px;border-radius:3px;flex:0 0 auto;border:1px solid rgba(0,0,0,.18)}
+.leg .gr{color:var(--cinza);font-size:9.5px;margin:1px 0 3px 18px}
+.leg .sub{display:flex;align-items:center;gap:6px;margin:2px 0 0 18px;color:#444;font-size:10px}
+.leg .sub .lc{width:18px;height:9px;border-radius:2px;border:1px solid rgba(0,0,0,.12);flex:0 0 auto}
+.leg .note{color:var(--cinza);font-size:9.5px;font-style:italic;margin-top:6px;border-top:1px solid var(--linha);padding-top:6px;line-height:1.4}
+.leg.min .lbody{display:none}
+.spin{width:16px;height:16px;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .8s linear infinite;display:inline-block}
+@keyframes sp{to{transform:rotate(360deg)}}
+/* ícone de processamento */
+.proc{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:54px 16px;text-align:center}
+.proc .ring{position:relative;width:88px;height:88px;margin-bottom:20px}
+.proc .ring i{position:absolute;inset:0;border-radius:50%;border:3px solid var(--verde);opacity:0;animation:ripple 1.8s ease-out infinite}
+.proc .ring i:nth-child(2){animation-delay:.6s}
+.proc .ring i:nth-child(3){animation-delay:1.2s}
+.proc .drop{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;animation:bob 1.5s ease-in-out infinite}
+.proc .drop svg{width:34px;height:44px;fill:var(--verde)}
+.proc .ptxt{font-family:var(--tit);color:var(--verde);font-size:19px}
+.proc .psub{color:var(--cinza);font-size:12px;margin-top:4px;max-width:26ch;line-height:1.4}
+@keyframes ripple{0%{transform:scale(.3);opacity:.75}100%{transform:scale(1);opacity:0}}
+@keyframes bob{0%,100%{transform:translateY(-3px)}50%{transform:translateY(4px)}}
+/* animação das barras e cartões */
+.scalecard{animation:fadein .45s ease both}
+.scalecard:nth-child(3){animation-delay:.06s}.scalecard:nth-child(4){animation-delay:.12s}
+@keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media(max-width:1100px){.main{grid-template-columns:1fr;grid-template-rows:auto 46vh auto}.panel{border-right:none;border-bottom:1px solid var(--linha)}.results{border-left:none;border-top:1px solid var(--linha)}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">APCAC<small>INSTITUTO CERRADOS</small></div>
+  <div class="ttl">Este local está numa <b>Área Prioritária para Conservação de Água</b>?</div>
+  <a class="lnk" href="https://yurisalmona.github.io/apcac-nota/" target="_blank" rel="noopener">Nota técnica</a>
+</header>
+<div class="main">
+  <!-- INPUT -->
+  <aside class="panel"><div class="pad">
+    <h2 class="sec">1 · Informe a área</h2>
+    <p class="hint">Envie um shapefile compactado (.zip) ou desenhe um polígono no mapa. A ferramenta identifica em qual classe da APCAC a área se enquadra, nas três escalas de análise.</p>
+
+    <div class="card">
+      <h3><span class="n">A</span> Upload de shapefile (.zip)</h3>
+      <div class="dz" id="dz">Arraste o <b>.zip</b> aqui<br>ou clique para escolher<br><span style="font-size:11px">(deve conter .shp, .shx, .dbf e .prj)</span></div>
+      <input type="file" id="file" accept=".zip" style="display:none">
+    </div>
+
+    <div class="sep">ou</div>
+
+    <div class="card">
+      <h3><span class="n">B</span> Desenhar no mapa</h3>
+      <p class="hint" style="margin-bottom:10px">Clique em “Desenhar polígono” e marque os vértices no mapa; clique no primeiro ponto (ou duplo-clique) para fechar.</p>
+      <button class="btn" id="drawBtn"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" style="flex:0 0 auto"><path d="M4 7.5 L12 3 L20 8 L16.5 19 L7 18 Z"/><circle cx="4" cy="7.5" r="1.9" fill="#fff"/><circle cx="12" cy="3" r="1.9" fill="#fff"/><circle cx="20" cy="8" r="1.9" fill="#fff"/><circle cx="16.5" cy="19" r="1.9" fill="#fff"/><circle cx="7" cy="18" r="1.9" fill="#fff"/></svg> Desenhar polígono</button>
+      <button class="btn ghost" id="clearBtn">Limpar</button>
+    </div>
+
+    <div id="status" class="status">Pronto. Aguardando uma área.</div>
+
+    <div class="foot">
+      Base de dados: APCAC — Termo de Cooperação MMA nº 04/2024, execução Instituto Cerrados &amp; IPH-UFRGS.
+      A classificação é feita por interseção com as sub-bacias (malha BHO) do estudo, nas escalas de bioma, região hidrográfica e unidade de planejamento hídrico.
+    </div>
+  </div></aside>
+
+  <!-- MAP -->
+  <div id="map"></div>
+
+  <!-- RESULTS -->
+  <aside class="panel results"><div class="pad" id="resPad">
+    <div class="scaletabs" id="scaletabs" style="display:none">
+      <button data-s="cd_cerrado" class="on">Bioma</button>
+      <button data-s="cd_rhi">Região Hidrográfica</button>
+      <button data-s="cd_uph">UPH</button>
+    </div>
+    <div id="results">
+      <div class="res-empty"><span class="big">Resultado</span>Informe ou desenhe uma área para ver aqui a classificação APCAC, a leitura cartográfica e a interpretação técnica.</div>
+    </div>
+  </div></aside>
+</div>
+
+<!-- libs -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script src="https://unpkg.com/shpjs@6.1.0/dist/shp.min.js"></script>
+<script src="https://unpkg.com/pmtiles@3.2.0/dist/pmtiles.js"></script>
+<script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
+<script src="https://unpkg.com/pbf@3.2.1/dist/pbf.js"></script>
+<script>
+/* ============================ DADOS ============================ */
+const BASE='https://yurisalmona.github.io/apcac-webmap/';
+// Legenda oficial (legenda.json do webmap) — cd => {cor, pred, prio, acao, risco}
+const LEG={
+ IAR:['#550000','natural','Extremamente Alta','Comando e Controle','Risco de Desmatamento'],
+ IBR:['#800000','natural','Muito Alta','Comando e Controle','Risco de Desmatamento'],
+ ICR:['#d40000','natural','Alta','Comando e Controle','Risco de Desmatamento'],
+ IXR:['#ff8080','natural','Regular','Comando e Controle','Risco de Desmatamento'],
+ IA:['#1c4942','natural','Extremamente Alta','Proteção','Risco de Desmatamento'],
+ IB:['#248248','natural','Muito Alta','Proteção','Risco de Desmatamento'],
+ IC:['#51a24c','natural','Alta','Proteção','Risco de Desmatamento'],
+ IX:['#a8c8a5','natural','Regular','Proteção','Risco de Desmatamento'],
+ IIAR:['#440055','antrópica','Extremamente Alta','Restauração Ecológica','Risco de Degradação do Solo'],
+ IIBR:['#8800aa','antrópica','Muito Alta','Restauração Ecológica','Risco de Degradação do Solo'],
+ IICR:['#e05cff','antrópica','Alta','Restauração Ecológica','Risco de Degradação do Solo'],
+ IIXR:['#d4abde','antrópica','Regular','Restauração Ecológica','Risco de Degradação do Solo'],
+ IIA:['#1f3a70','antrópica','Extremamente Alta','Restauração Ecológica','Risco Padrão'],
+ IIB:['#376ea0','antrópica','Muito Alta','Restauração Ecológica','Risco Padrão'],
+ IIC:['#458ea0','antrópica','Alta','Restauração Ecológica','Risco Padrão'],
+ IIX:['#8ec4c4','antrópica','Regular','Restauração Ecológica','Risco Padrão'],
+ IIAC:['#ff9400','antrópica','Extremamente Alta','Manejo do Solo e Revezamento Hídrico','Risco de Aridez'],
+ IIBC:['#ffa700','antrópica','Muito Alta','Manejo do Solo e Revezamento Hídrico','Risco de Aridez'],
+ IICC:['#ffba00','antrópica','Alta','Manejo do Solo e Revezamento Hídrico','Risco de Aridez'],
+ XC:['#ffdd81','mista','Regular','Conjunto de Ações Diversas','Risco de Aridez'],
+};
+function cls(cd){ const v=LEG[cd]; if(!v) return {cd:cd||'—',cor:'#e8e8e8',pred:'—',prio:'Regular',acao:'Sem categoria de prioridade',risco:'Risco padrão de perda de vazão'}; return {cd,cor:v[0],pred:v[1],prio:v[2],acao:v[3],risco:v[4]}; }
+const PRIO_ORDER={'Extremamente Alta':4,'Muito Alta':3,'Alta':2,'Regular':1};
+
+// Caracterização de cada Região Hidrográfica (extraída da nota técnica — sem conhecimento novo)
+const RHI_NOTE={
+ 'SÃO FRANCISCO':'Na porção cerratense da Região Hidrográfica do São Francisco, a quase totalidade do território é prioritária para a conservação de água (92,3%), com forte presença do Conjunto de Ações Diversas e da Restauração Ecológica e participação expressiva do risco de aridez.',
+ 'AMAZÔNICA':'A porção do Cerrado da Região Hidrográfica Amazônica destaca-se pela alta importância hidrológica — é a que reúne a maior fração de prioridade Extremamente Alta — sem áreas sob risco de aridez, coerente com o regime úmido dessa fronteira setentrional, onde nascem rios que alimentam o bioma Amazônico; predominam a Proteção e a Restauração Ecológica.',
+ 'ATLÂNTICO LESTE':'Na Região Hidrográfica Atlântico Leste, praticamente todo o território de Cerrado é prioritário, com a Proteção liderando e um risco de aridez expressivo, assinatura da transição para o semiárido nordestino.',
+ 'ATLÂNTICO NORDESTE OCIDENTAL':'Na Região Hidrográfica Atlântico Nordeste Ocidental, em sua porção de Cerrado, a marca dominante é a aridez, e o Conjunto de Ações Diversas lidera, reflexo de sua inserção na faixa de transição climática do nordeste cerratense.',
+ 'ATLÂNTICO NORDESTE ORIENTAL':'A Região Hidrográfica Atlântico Nordeste Oriental comparece no Cerrado apenas como uma faixa marginal, integralmente classificada sob risco de aridez, na classe de Conjunto de Ações Diversas.',
+ 'ATLÂNTICO SUDESTE':'A parcela de bioma Cerrado da Região Hidrográfica Atlântico Sudeste é pequena, porém de altíssima importância hidrológica — com forte peso da prioridade Extremamente Alta —, confirmando seu papel estratégico como área de cabeceiras; a Proteção e a Restauração Ecológica dividem-se de forma quase equilibrada.',
+ 'PARAGUAI':'Na porção de Cerrado da Região Hidrográfica do Paraguai — que abriga a planície pantaneira e suas áreas de contribuição —, a Restauração Ecológica é a ação predominante.',
+ 'PARANÁ':'A Região Hidrográfica do Paraná, uma das maiores em área cerratense e origem de parte expressiva da água que move usinas como Itaipu, é fortemente antropizada, e a Restauração Ecológica é largamente predominante, com escassez de remanescentes nativos.',
+ 'PARNAÍBA':'A Região Hidrográfica do Parnaíba tem no Cerrado sua origem quase integral — o bioma fornece 100% de sua água —, com a Proteção liderando e um risco de aridez expressivo em sua porção nordestina.',
+ 'TOCANTINS-ARAGUAIA':'A Região Hidrográfica do Tocantins-Araguaia é a mais extensa em área de Cerrado; nessa escala, a priorização interna distribui-se sobre um vasto território, e uma parcela significativa mantém importância hidrológica regular.',
+};
+
+// Explicações de conceito (da nota técnica)
+const PRIO_TXT={
+ 'Extremamente Alta':'de prioridade hidrológica extremamente alta — situada acima do percentil 90 de importância, entre as bacias com maior potencial de regular o fluxo dos rios por meio da ampliação da infiltração da água no solo',
+ 'Muito Alta':'de prioridade hidrológica muito alta — entre os percentis 70 e 90 de importância para a regulação de vazões por meio da infiltração',
+ 'Alta':'de prioridade hidrológica alta — entre os percentis 50 e 70 de importância para a regulação do fluxo de água',
+ 'Regular':'de importância hidrológica regular — de menor destaque relativo nesta escala de análise, o que, como adverte a própria nota técnica, não significa ausência de importância hidrológica'
+};
+const RISCO_TXT={
+ 'Risco de Desmatamento':'o risco predominante é o de desmatamento, associado à pressão de perda da cobertura nativa, avaliada pela tendência de desmatamento observada entre 2018 e 2023',
+ 'Risco de Degradação do Solo':'o risco predominante é o de degradação do solo, ligado à possibilidade de erosão em solos e relevos menos estáveis',
+ 'Risco de Aridez':'o risco predominante é o de aridez, próprio das áreas em que a precipitação é inferior à evapotranspiração potencial, marcadas por déficit hídrico',
+ 'Risco Padrão':'aplica-se o risco padrão — a perda da capacidade da bacia de regular os fluxos da água e de ampliar a disponibilidade em períodos de seca, comum a todas as classes',
+ 'Risco padrão de perda de vazão':'aplica-se o risco padrão de perda de vazão, comum a todas as classes'
+};
+const ACAO_TXT={
+ 'Proteção':'a ação predominante é a Proteção, indicada para bacias predominantemente cobertas por vegetação nativa e sem tendência recente de desmatamento. Na aplicação, essas áreas subsidiam a criação e a priorização de unidades de conservação voltadas à manutenção dos estoques de água (art. 2º, inciso I, da Lei nº 9.985/2000), a formação de corredores ecológicos e o direcionamento da compensação de reserva legal (Lei nº 12.651/2012) para as bacias de maior importância hidrológica',
+ 'Comando e Controle':'a ação predominante é o Comando e Controle, indicada para bacias predominantemente nativas, porém sob tendência recente de desmatamento. Na aplicação, essas áreas orientam a fiscalização, a prevenção e o combate ao desmatamento e às queimadas e fundamentam ações de monitoramento ambiental (Lei nº 11.367/2006; art. 61 da Lei nº 12.651/2012)',
+ 'Restauração Ecológica':'a ação predominante é a Restauração Ecológica, indicada para bacias predominantemente antropizadas. Na aplicação, essas áreas orientam a condução da regeneração natural, a restauração ecológica e a recomposição de Áreas de Preservação Permanente e de Reserva Legal (Lei nº 12.651/2012; Lei nº 14.653/2023), além dos Programas de Regularização Ambiental e das ações de revitalização de bacias',
+ 'Manejo do Solo e Revezamento Hídrico':'a ação predominante é o Manejo do Solo e Revezamento Hídrico, voltada às áreas sob risco de aridez e déficit hídrico, onde se recomendam o manejo do solo e a reservação d’água',
+ 'Conjunto de Ações Diversas':'a indicação é de um Conjunto de Ações Diversas, correspondente a bacias de predominância mista sob risco de aridez e prioridade hidrológica regular, que reúnem combinações das ações anteriores',
+ 'Sem categoria de prioridade':'não há categoria de ação prioritária associada, por se tratar de bacia de importância hidrológica regular nesta escala'
+};
+const PRED_TXT={'natural':'de predominância de vegetação nativa (ao menos 60% de cobertura nativa)','antrópica':'de predominância de cobertura antropizada (menos de 60% de vegetação nativa)','mista':'de predominância mista','—':''};
+
+// Texto para prioridade regular (refinado a partir do texto fornecido)
+const REGULAR_TXT='A metodologia da APCAC prioriza as áreas com maior potencial de recarga e infiltração, com vistas a sustentar o fluxo d’água nos períodos secos a jusante. Por essa razão, ela pode não realçar áreas de descarga hídrica — planícies alagadas, fundos de vale e demais porções situadas a jusante das zonas de recarga. Isso não significa que essas áreas careçam de importância para o sistema hidrológico, tampouco que perturbações nelas não tenham impactos e riscos associados: trata-se de ambientes de valor ecológico e hídrico singular, que demandam estudos específicos para sua proteção e para a manutenção dos serviços ecossistêmicos que prestam. Cabe ainda ressaltar que perturbações a montante, nas porções priorizadas por esta metodologia, exercem forte influência sobre a reposição hídrica dessas áreas mais baixas: a supressão ou a degradação das zonas de recarga pode descaracterizar planícies alagadas e fundos de vale sem que sobre eles incida qualquer impacto direto, apenas pela perturbação das porções situadas acima.';
+
+const REGION_DISPLAY={'SÃO FRANCISCO':'do São Francisco','AMAZÔNICA':'Amazônica','ATLÂNTICO LESTE':'Atlântico Leste','ATLÂNTICO NORDESTE OCIDENTAL':'Atlântico Nordeste Ocidental','ATLÂNTICO NORDESTE ORIENTAL':'Atlântico Nordeste Oriental','ATLÂNTICO SUDESTE':'Atlântico Sudeste','PARAGUAI':'do Paraguai','PARANÁ':'do Paraná','PARNAÍBA':'do Parnaíba','TOCANTINS-ARAGUAIA':'do Tocantins-Araguaia'};
+const SCALE_NAME={cd_cerrado:'Bioma Cerrado',cd_rhi:'Região Hidrográfica',cd_uph:'Unidade de Planejamento Hídrico (UPH)'};
+const RASTER={cd_cerrado:'cerrado_raster.pmtiles',cd_rhi:'rhi_raster.pmtiles',cd_uph:'uph_raster.pmtiles'};
+
+/* ============================ MAPA ============================ */
+let map, drawnLayer, rasterLayer, currentScale='cd_cerrado', lastResult=null, limRHI=null;
+const carto=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20,attribution:'© OpenStreetMap © CARTO'});
+const esri=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Esri'});
+function setStatus(t,err){const s=document.getElementById('status');s.textContent=t;s.className='status'+(err?' err':'');}
+
+function initMap(){
+  map=L.map('map',{center:[-15.0,-49.5],zoom:4,zoomControl:true});
+  carto.addTo(map);
+  setRaster('cd_cerrado');
+  L.control.layers({'Claro (CARTO)':carto,'Satélite (Esri)':esri},{},{position:'bottomleft',collapsed:true}).addTo(map);
+  // legenda — padrão do webmap APCAC
+  const LEGGROUPS=[
+    {a:'Comando e Controle',r:'Risco de Desmatamento',c:['#550000','#800000','#d40000']},
+    {a:'Proteção',r:'Risco de Desmatamento',c:['#1c4942','#248248','#51a24c']},
+    {a:'Restauração Ecológica',r:'Risco de Degradação do Solo',c:['#440055','#8800aa','#e05cff']},
+    {a:'Restauração Ecológica',r:'Risco Padrão',c:['#1f3a70','#376ea0','#458ea0']},
+    {a:'Manejo do Solo e Revezamento Hídrico',r:'Risco de Aridez',c:['#ff9400','#ffa700','#ffba00']},
+  ];
+  const LEGSINGLE=[{a:'Conjunto de Ações Diversas',r:'Risco de Aridez',c:'#ffdd81'},{a:'Sem categoria',r:'importância hidrológica regular',c:'#e8e8e8'}];
+  const SUBL=['Extremamente Alta','Muito Alta','Alta'];
+  const lg=L.control({position:'bottomright'});
+  lg.onAdd=function(){const d=L.DomUtil.create('div','leg');
+    let b='<div class="lt" id="legTgl">Ação Prioritária / Risco Predominante <span class="cx">–</span></div><div class="lbody"><div class="lsub">Prioridade hidrológica, do tom escuro ao claro</div>';
+    for(const g of LEGGROUPS){ b+='<div class="grp"><div class="gh"><span class="gc" style="background:'+g.c[0]+'"></span>'+g.a+'</div><div class="gr">'+g.r+'</div>';
+      for(let i=0;i<3;i++) b+='<div class="sub"><span class="lc" style="background:'+g.c[i]+'"></span>'+SUBL[i]+'</div>';
+      b+='</div>'; }
+    for(const s of LEGSINGLE){ b+='<div class="grp"><div class="gh"><span class="gc" style="background:'+s.c+'"></span>'+s.a+'</div><div class="gr">'+s.r+'</div></div>'; }
+    b+='<div class="note">A ausência de categoria sobre uma área não significa falta de importância hidrológica.</div></div>';
+    d.innerHTML=b;
+    L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
+    d.querySelector('#legTgl').onclick=()=>{ d.classList.toggle('min'); d.querySelector('.cx').textContent=d.classList.contains('min')?'+':'–'; };
+    return d;};
+  lg.addTo(map);
+  // draw layer
+  drawnLayer=new L.FeatureGroup().addTo(map);
+  drawControl=new L.Control.Draw({
+    draw:{polygon:{allowIntersection:false,showArea:true,shapeOptions:{color:'#E85718',weight:3,fillOpacity:.06}},polyline:false,rectangle:{shapeOptions:{color:'#E85718',weight:3,fillOpacity:.06}},circle:false,marker:false,circlemarker:false},
+    edit:false
+  });
+  map.on(L.Draw.Event.CREATED,e=>{ drawnLayer.clearLayers(); drawnLayer.addLayer(e.layer); const gj=e.layer.toGeoJSON(); runAnalysis(gj.geometry); });
+}
+function legRow(name,cols){let s='<div class="lr">';for(const c of cols)s+='<span class="lc" style="background:'+c+'"></span>';s+=name+'</div>';return s;}
+let drawControl;
+function setRaster(scale){
+  if(rasterLayer) map.removeLayer(rasterLayer);
+  const src=new pmtiles.PMTiles(BASE+RASTER[scale]);
+  rasterLayer=pmtiles.leafletRasterLayer(src,{maxNativeZoom:9,minZoom:3,maxZoom:20,opacity:.82,attribution:'APCAC — Instituto Cerrados/IPH-UFRGS'});
+  rasterLayer.addTo(map);
+  if(drawnLayer) drawnLayer.bringToFront();
+}
+
+/* ============================ ANÁLISE ============================ */
+let PbfLib=window.Pbf, VTLib=null;
+async function ensureVT(){ if(!VTLib){ VTLib=await import('https://esm.sh/@mapbox/vector-tile@1.3.1'); } return VTLib; }
+async function decomp(buf){const u=new Uint8Array(buf);if(u[0]===0x1f&&u[1]===0x8b){const ds=new DecompressionStream('gzip');const ab=await new Response(new Blob([u]).stream().pipeThrough(ds)).arrayBuffer();return new Uint8Array(ab);}return u;}
+function lon2t(lon,z){return Math.floor((lon+180)/360*Math.pow(2,z));}
+function lat2t(lat,z){const r=lat*Math.PI/180;return Math.floor((1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*Math.pow(2,z));}
+const detPM=new pmtiles.PMTiles(BASE+'apcac_detalhe.pmtiles');
+const limPM=new pmtiles.PMTiles(BASE+'limites.pmtiles');
+
+async function regionName(poly){
+  try{
+    const VT=await ensureVT();
+    const cen=turf.centroid(poly).geometry.coordinates;
+    for(const [x,y] of [[2,4],[3,4]]){
+      const t=await limPM.getZxy(3,x,y); if(!t||!t.data)continue;
+      const vt=new VT.VectorTile(new PbfLib(await decomp(t.data)));
+      const L2=vt.layers['lim_rhi']; if(!L2)continue;
+      for(let i=0;i<L2.length;i++){ const f=L2.feature(i); const gj=f.toGeoJSON(x,y,3);
+        try{ if(turf.booleanPointInPolygon(cen,gj)) return (f.properties.nome||'').toUpperCase(); }catch(e){}
+      }
+    }
+  }catch(e){}
+  return null;
+}
+
+async function classify(poly){
+  const VT=await ensureVT();
+  const bb=turf.bbox(poly), z=10;
+  const x0=lon2t(bb[0],z),x1=lon2t(bb[2],z),y0=lat2t(bb[3],z),y1=lat2t(bb[1],z);
+  const agg={cd_cerrado:{},cd_rhi:{},cd_uph:{}}; let total=0, basins=new Set();
+  for(let x=x0;x<=x1;x++)for(let y=y0;y<=y1;y++){
+    const t=await detPM.getZxy(z,x,y); if(!t||!t.data)continue;
+    const vt=new VT.VectorTile(new PbfLib(await decomp(t.data)));
+    const L2=vt.layers['apcac']; if(!L2)continue;
+    for(let i=0;i<L2.length;i++){
+      const f=L2.feature(i); const gj=f.toGeoJSON(x,y,z);
+      let inter; try{ inter=turf.intersect(poly,gj); }catch(e){ continue; }
+      if(!inter)continue;
+      let a; try{ a=turf.area(inter); }catch(e){ continue; } if(!a||a<=0)continue;
+      total+=a; basins.add(gj.properties.cobacia);
+      for(const k of ['cd_cerrado','cd_rhi','cd_uph']){ const cd=gj.properties[k]; if(cd===undefined||cd===null||cd==='')continue; agg[k][cd]=(agg[k][cd]||0)+a; }
+    }
+  }
+  return {total_ha:total/1e4, area_m2:total, agg, nbasins:basins.size};
+}
+
+function rank(obj){ // -> [{cd, area, pct, ...cls}]
+  const tot=Object.values(obj).reduce((a,b)=>a+b,0)||1;
+  return Object.entries(obj).map(([cd,a])=>Object.assign({cd,area:a,pct:a/tot*100},cls(cd))).sort((x,y)=>y.area-x.area);
+}
+
+async function runAnalysis(geom){
+  try{
+    setStatus('Analisando a área…');
+    document.getElementById('results').innerHTML='<div class="proc"><div class="ring"><i></i><i></i><i></i><div class="drop"><svg viewBox="0 0 24 32"><path d="M12 0C12 0 2 12 2 20a10 10 0 0 0 20 0C22 12 12 0 12 0z"/></svg></div></div><div class="ptxt">Analisando a área…</div><div class="psub">Cruzando o polígono com as sub-bacias da APCAC</div></div>';
+    // normalize to Feature<Polygon/MultiPolygon>
+    let poly=geom.type==='Feature'?geom:turf.feature(geom);
+    if(poly.geometry.type!=='Polygon'&&poly.geometry.type!=='MultiPolygon'){ setStatus('A geometria não é um polígono.',true); return; }
+    // zoom
+    const b=turf.bbox(poly); map.fitBounds([[b[1],b[0]],[b[3],b[2]]],{padding:[40,40],maxZoom:12});
+    const [res,region]=await Promise.all([classify(poly),regionName(poly)]);
+    res.region=region; res.geom=poly; lastResult=res;
+    if(res.total_ha<=0||Object.keys(res.agg.cd_cerrado).length===0){
+      setStatus('Fora da área de análise (Cerrado).',true);
+      document.getElementById('results').innerHTML='<div class="res-empty"><span class="big">Fora do Cerrado</span>O polígono não intercepta as sub-bacias analisadas pela APCAC. A ferramenta cobre a zona de influência hidrológica do bioma Cerrado.</div>';
+      document.getElementById('scaletabs').style.display='none';
+      return;
+    }
+    setStatus('Análise concluída — '+res.nbasins+' sub-bacia(s), '+fmt(res.total_ha)+' ha.');
+    document.getElementById('scaletabs').style.display='flex';
+    renderResults();
+  }catch(e){ console.error(e); setStatus('Erro na análise: '+e.message,true); }
+}
+function fmt(n){return n.toLocaleString('pt-BR',{maximumFractionDigits:n<100?1:0});}
+
+/* ============================ RESULTADO GRÁFICO ============================ */
+function renderResults(){
+  const r=lastResult; if(!r)return;
+  const scaleRanks={cd_cerrado:rank(r.agg.cd_cerrado),cd_rhi:rank(r.agg.cd_rhi),cd_uph:rank(r.agg.cd_uph)};
+  const rk=scaleRanks[currentScale]; const dom=rk[0];
+  const isPrior=dom.prio!=='Regular';
+  const vcol=dom.cor;
+  // verdict
+  let html='<div class="verdict" style="background:linear-gradient(135deg,'+shade(vcol,-.12)+','+vcol+')">';
+  html+='<div class="lbl">'+SCALE_NAME[currentScale]+'</div>';
+  html+='<div class="big">'+(isPrior?'Área prioritária':'Importância regular')+'</div>';
+  html+='<div class="sub">Classe predominante: <b>'+dom.prio+'</b> · '+dom.acao+(dom.risco?(' · '+dom.risco):'')+'</div></div>';
+  // scale cards (all three)
+  for(const sc of ['cd_cerrado','cd_rhi','cd_uph']){
+    const list=scaleRanks[sc]; if(!list.length)continue;
+    html+='<div class="scalecard"><div class="st">'+SCALE_NAME[sc]+'</div>';
+    html+='<div class="bar">'+list.map(c=>'<span data-w="'+c.pct.toFixed(1)+'" style="background:'+c.cor+'" title="'+c.prio+' '+c.pct.toFixed(1)+'%"></span>').join('')+'</div>';
+    for(const c of list.slice(0,4)){
+      html+='<div class="classrow"><div class="sw" style="background:'+c.cor+'"></div><div class="cinfo"><div class="cprio">'+c.prio+'</div><div class="cmeta">'+c.acao+' · '+c.risco+'</div></div><div class="cpct">'+c.pct.toFixed(0)+'%</div></div>';
+    }
+    html+='</div>';
+  }
+  // texto
+  html+='<div class="texto" id="laudo">'+buildText(r,scaleRanks)+'</div>';
+  html+='<div class="dlbtns"><button class="btn ghost" id="dlText">Copiar laudo</button><button class="btn ghost" id="dlGeo">Baixar GeoJSON</button></div>';
+  html+='<div class="foot">Interpretação baseada exclusivamente na Nota Técnica APCAC (Instituto Cerrados / IPH-UFRGS, 2026). A ferramenta indica a classe predominante por escala; outras ações podem ser recomendadas em análises específicas.</div>';
+  document.getElementById('results').innerHTML=html;
+  setTimeout(()=>{document.querySelectorAll('#results .bar span').forEach(s=>{s.style.width=s.dataset.w+'%';});},40);
+  document.getElementById('dlText').onclick=()=>{navigator.clipboard.writeText(document.getElementById('laudo').innerText);document.getElementById('dlText').textContent='Copiado ✓';};
+  document.getElementById('dlGeo').onclick=()=>{const blob=new Blob([JSON.stringify(r.geom)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='area_analisada.geojson';a.click();};
+}
+function shade(hex,p){const n=parseInt(hex.slice(1),16);let R=(n>>16)&255,G=(n>>8)&255,Bb=n&255;R=Math.max(0,Math.min(255,R+R*p));G=Math.max(0,Math.min(255,G+G*p));Bb=Math.max(0,Math.min(255,Bb+Bb*p));return 'rgb('+(R|0)+','+(G|0)+','+(Bb|0)+')';}
+
+/* ============================ TEXTO (laudo) ============================ */
+function pct(x){return x.pct.toFixed(x.pct<10?1:0).replace('.',',')+'%';}
+function scaleParagraph(scaleKey,list){
+  const dom=list[0];
+  let s='<b>'+SCALE_NAME[scaleKey]+'.</b> ';
+  s+='Nesta escala, a área é majoritariamente classificada como '+PRIO_TXT[dom.prio]+'. ';
+  if(dom.pred&&PRED_TXT[dom.pred]) s+='Trata-se de bacia '+PRED_TXT[dom.pred]+', na qual '+ACAO_TXT[dom.acao]+'. ';
+  else s+=ACAO_TXT[dom.acao].charAt(0).toUpperCase()+ACAO_TXT[dom.acao].slice(1)+'. ';
+  s+='Quanto ao risco, '+RISCO_TXT[dom.risco]+'.';
+  // sobreposições
+  const others=list.slice(1).filter(c=>c.pct>=3);
+  if(others.length){
+    s+=' Há sobreposição de classes: além da classe predominante ('+pct(dom)+'), a área também abrange '+others.map(c=>c.prio.toLowerCase()+' com '+c.acao.toLowerCase()+' ('+pct(c)+')').join('; ')+'.';
+  }
+  return '<p>'+s+'</p>';
+}
+function buildText(r,ranks){
+  let h='';
+  h+='<h4>Localização</h4>';
+  let loc='O polígono analisado, com área aproximada de <b>'+fmt(r.total_ha)+' ha</b>, ';
+  if(r.region){ loc+='situa-se na porção cerratense da Região Hidrográfica '+(REGION_DISPLAY[r.region]||r.region)+'. '+(RHI_NOTE[r.region]||''); }
+  else { loc+='situa-se na zona de influência hidrológica do bioma Cerrado.'; }
+  h+='<p>'+loc+'</p>';
+  h+='<h4>Classificação por escala</h4>';
+  h+=scaleParagraph('cd_cerrado',ranks.cd_cerrado);
+  h+=scaleParagraph('cd_rhi',ranks.cd_rhi);
+  h+=scaleParagraph('cd_uph',ranks.cd_uph);
+  // síntese de sobreposição entre escalas
+  const doms=['cd_cerrado','cd_rhi','cd_uph'].map(k=>ranks[k][0].prio);
+  if(new Set(doms).size>1){
+    h+='<p><b>Leitura integrada.</b> A prioridade atribuída à área varia conforme a escala de análise — '+
+       'Extremamente/Muito Alta/Alta/Regular refletem a comparação com o conjunto amostral de cada recorte. '+
+       'Assim, uma mesma área pode figurar com menor destaque na escala de bioma, que realça as macroestruturas da paisagem, e ganhar prioridade nas escalas de Região Hidrográfica e de Unidade de Planejamento Hídrico, que revelam a distribuição interna de prioridades. As três escalas são complementares e respondem a diferentes níveis de decisão e governança.</p>';
+  }
+  // combinação da legenda
+  h+='<p>Vale lembrar que a legenda da APCAC combina, simultaneamente, três elementos: a <b>prioridade hidrológica</b>, que indica o potencial de regulação do fluxo por meio da infiltração; o <b>risco predominante</b>, que aponta as principais perdas ambientais no caso de não ação; e a <b>ação prioritária</b>, que orienta, de forma majoritária, o que deve ser feito na bacia.</p>';
+  // regular
+  const anyRegularDom=['cd_cerrado','cd_rhi','cd_uph'].some(k=>ranks[k][0].prio==='Regular');
+  if(anyRegularDom){
+    h+='<div class="callout"><b>Sobre a prioridade regular.</b> '+REGULAR_TXT+'</div>';
+  }
+  return h;
+}
+function capRegion(u){ return u.split(' ').map(w=>w.length<=3&&w!=='SÃO'?w.toLowerCase():w.charAt(0)+w.slice(1).toLowerCase()).join(' ').replace('Do ','do ').replace('Da ','da '); }
+
+/* ============================ UPLOAD & DRAW UI ============================ */
+function wire(){
+  const dz=document.getElementById('dz'), file=document.getElementById('file');
+  dz.onclick=()=>file.click();
+  dz.ondragover=e=>{e.preventDefault();dz.classList.add('drag');};
+  dz.ondragleave=()=>dz.classList.remove('drag');
+  dz.ondrop=e=>{e.preventDefault();dz.classList.remove('drag');if(e.dataTransfer.files[0])handleZip(e.dataTransfer.files[0]);};
+  file.onchange=e=>{if(e.target.files[0])handleZip(e.target.files[0]);};
+  document.getElementById('drawBtn').onclick=()=>{ new L.Draw.Polygon(map,drawControl.options.draw.polygon).enable(); setStatus('Desenhe o polígono: clique nos vértices e feche no primeiro ponto.'); };
+  document.getElementById('clearBtn').onclick=()=>{ drawnLayer.clearLayers(); document.getElementById('results').innerHTML='<div class="res-empty"><span class="big">Resultado</span>Informe ou desenhe uma área.</div>'; document.getElementById('scaletabs').style.display='none'; setStatus('Limpo.'); };
+  document.querySelectorAll('#scaletabs button').forEach(btn=>btn.onclick=()=>{
+    document.querySelectorAll('#scaletabs button').forEach(b=>b.classList.remove('on')); btn.classList.add('on');
+    currentScale=btn.dataset.s; setRaster(currentScale); renderResults();
+  });
+}
+async function handleZip(f){
+  try{
+    setStatus('Lendo shapefile “'+f.name+'”…');
+    const buf=await f.arrayBuffer();
+    const gj=await shp(buf); // FeatureCollection or array
+    const fc=Array.isArray(gj)?{type:'FeatureCollection',features:gj.flatMap(x=>x.features||[x])}:gj;
+    const polys=(fc.features||[]).filter(ft=>ft.geometry&&/Polygon/.test(ft.geometry.type));
+    if(!polys.length){ setStatus('O .zip não contém polígonos.',true); return; }
+    let merged=polys[0];
+    for(let i=1;i<polys.length;i++){ try{ merged=turf.union(merged,polys[i]); }catch(e){} }
+    drawnLayer.clearLayers();
+    L.geoJSON(merged,{style:{color:'#E85718',weight:3,fillOpacity:.06}}).eachLayer(l=>drawnLayer.addLayer(l));
+    runAnalysis(merged.geometry);
+  }catch(e){ console.error(e); setStatus('Não consegui ler o shapefile: '+e.message,true); }
+}
+
+window.addEventListener('load',()=>{ initMap(); wire(); });
+</script>
+</body>
+</html>
