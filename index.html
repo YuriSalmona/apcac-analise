@@ -419,7 +419,7 @@ function scaleParagraph(scaleKey,list){
   // sobreposições
   const others=list.slice(1).filter(c=>c.pct>=3);
   if(others.length){
-    s+=' Há sobreposição de classes: além da classe predominante ('+pct(dom)+'), a área também abrange '+others.map(c=>c.prio.toLowerCase()+' com '+c.acao.toLowerCase()+' ('+pct(c)+')').join('; ')+'.';
+    s+=' Há sobreposição de classes: além da classe predominante ('+pct(dom)+'), a área também abrange '+others.map(c=>c.prio.toLowerCase()+', com '+c.acao.toLowerCase()+' sob '+c.risco.toLowerCase()+' ('+pct(c)+')').join('; ')+'.';
   }
   return '<p>'+s+'</p>';
 }
@@ -460,7 +460,7 @@ function wire(){
   dz.ondragleave=()=>dz.classList.remove('drag');
   dz.ondrop=e=>{e.preventDefault();dz.classList.remove('drag');if(e.dataTransfer.files[0])handleZip(e.dataTransfer.files[0]);};
   file.onchange=e=>{if(e.target.files[0])handleZip(e.target.files[0]);};
-  document.getElementById('drawBtn').onclick=()=>{ new L.Draw.Polygon(map,drawControl.options.draw.polygon).enable(); setStatus('Desenhe o polígono: clique nos vértices e feche no primeiro ponto.'); };
+  document.getElementById('drawBtn').onclick=()=>{ try{window._drawH&&window._drawH.disable();}catch(e){} window._drawH=new L.Draw.Polygon(map,drawControl.options.draw.polygon); window._drawH.enable(); setStatus('Desenhe o polígono: clique nos vértices e feche no primeiro ponto (ou duplo-clique).'); };
   document.getElementById('clearBtn').onclick=()=>{ drawnLayer.clearLayers(); document.getElementById('results').innerHTML='<div class="res-empty"><span class="big">Resultado</span>Informe ou desenhe uma área.</div>'; document.getElementById('scaletabs').style.display='none'; setStatus('Limpo.'); };
   document.querySelectorAll('#scaletabs button').forEach(btn=>btn.onclick=()=>{
     document.querySelectorAll('#scaletabs button').forEach(b=>b.classList.remove('on')); btn.classList.add('on');
