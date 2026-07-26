@@ -113,6 +113,44 @@ h2.sec{font-family:var(--tit);color:var(--verde);font-size:19px;margin:0 0 4px}
 .scalecard:nth-child(3){animation-delay:.06s}.scalecard:nth-child(4){animation-delay:.12s}
 @keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @media(max-width:1100px){.main{grid-template-columns:1fr;grid-template-rows:auto 46vh auto}.panel{border-right:none;border-bottom:1px solid var(--linha)}.results{border-left:none;border-top:1px solid var(--linha)}}
+/* ===== v2: autenticação e histórico ===== */
+.auth{display:flex;align-items:center;gap:10px}
+.auth .chip{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:4px 12px 4px 4px;font-size:12px;color:#fff}
+.auth .chip img{width:26px;height:26px;border-radius:50%;display:block}
+.auth .chip .nm{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.auth .abtn{background:transparent;border:1px solid rgba(255,255,255,.35);color:#cfe0d4;font-family:var(--corpo);font-size:12px;padding:6px 12px;border-radius:6px;cursor:pointer}
+.auth .abtn:hover{background:rgba(255,255,255,.1)}
+.auth .abtn.gbtn{background:#fff;color:#3c4043;border:none;font-weight:600;display:inline-flex;align-items:center;gap:8px}
+.auth .abtn.gbtn:hover{background:#f1f1f1}
+.modal-ov{position:fixed;inset:0;background:rgba(20,25,18,.55);backdrop-filter:blur(3px);z-index:3000;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:#fff;border-radius:14px;max-width:430px;width:100%;padding:28px;box-shadow:0 18px 60px rgba(0,0,0,.35);text-align:center}
+.modal h3{font-family:var(--tit);color:var(--verde);font-size:24px;margin:0 0 8px}
+.modal p{color:var(--cinza);font-size:13.5px;line-height:1.6;margin:0 0 18px}
+.modal .gbig{display:inline-flex;align-items:center;gap:10px;background:#fff;border:1.5px solid #dadce0;border-radius:8px;color:#3c4043;font-family:var(--corpo);font-weight:600;font-size:15px;padding:12px 22px;cursor:pointer;transition:.15s}
+.modal .gbig:hover{box-shadow:0 2px 10px rgba(0,0,0,.12);border-color:#c7cbd0}
+.modal .priv{font-size:11px;color:var(--cinza);margin-top:16px;line-height:1.5}
+.modal .xclose{position:absolute;top:10px;right:14px;border:none;background:none;font-size:22px;color:var(--cinza);cursor:pointer}
+.modal-card{position:relative}
+/* painel admin */
+.admin-ov{position:fixed;inset:0;background:rgba(20,25,18,.55);z-index:3000;display:flex;align-items:center;justify-content:center;padding:24px}
+.admin{background:#fff;border-radius:14px;max-width:1060px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 18px 60px rgba(0,0,0,.35);overflow:hidden}
+.admin .ah{background:var(--verde);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:12px}
+.admin .ah h3{font-family:var(--tit);font-size:20px;margin:0;flex:1}
+.admin .ah button{background:transparent;border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:6px;padding:6px 12px;font-family:var(--corpo);font-size:12px;cursor:pointer}
+.admin .ah button:hover{background:rgba(255,255,255,.12)}
+.admin .abody{overflow:auto;padding:0}
+.admin table{width:100%;border-collapse:collapse;font-size:12.5px}
+.admin th{position:sticky;top:0;background:var(--bege-cl);color:var(--verde);text-align:left;padding:9px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;border-bottom:2px solid var(--bege)}
+.admin td{padding:8px 12px;border-bottom:1px solid var(--linha);vertical-align:middle}
+.admin tr:hover td{background:var(--bege-cl)}
+.admin .og{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px}
+.admin .og.upload{background:#e8f0e9;color:var(--verde)}
+.admin .og.desenho{background:#fdeee4;color:var(--laranja)}
+.admin .tbtn{border:1px solid var(--linha);background:#fff;color:var(--verde);border-radius:6px;padding:4px 9px;font-size:11.5px;cursor:pointer;font-family:var(--corpo)}
+.admin .tbtn:hover{background:var(--bege-cl)}
+.admin .af{padding:10px 20px;border-top:1px solid var(--linha);display:flex;align-items:center;gap:10px;font-size:12px;color:var(--cinza)}
+.admin .af button{border:1px solid var(--linha);background:#fff;border-radius:6px;padding:6px 12px;cursor:pointer;font-family:var(--corpo);font-size:12px}
+.admin .af button:disabled{opacity:.4;cursor:default}
 </style>
 </head>
 <body>
@@ -120,6 +158,7 @@ h2.sec{font-family:var(--tit);color:var(--verde);font-size:19px;margin:0 0 4px}
   <div class="brand">APCAC<small>INSTITUTO CERRADOS</small></div>
   <div class="ttl">Este local está numa <b>Área Prioritária para Conservação de Água</b>?</div>
   <a class="lnk" href="https://yurisalmona.github.io/apcac-nota/" target="_blank" rel="noopener">Nota técnica</a>
+  <div class="auth" id="authBox"></div>
 </header>
 <div class="main">
   <!-- INPUT -->
@@ -173,6 +212,7 @@ h2.sec{font-family:var(--tit);color:var(--verde);font-size:19px;margin:0 0 4px}
 <script src="https://unpkg.com/pmtiles@3.2.0/dist/pmtiles.js"></script>
 <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
 <script src="https://unpkg.com/pbf@3.2.1/dist/pbf.js"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
 /* ============================ DADOS ============================ */
 const BASE='https://yurisalmona.github.io/apcac-webmap/';
@@ -287,7 +327,7 @@ function initMap(){
     draw:{polygon:{allowIntersection:false,showArea:true,shapeOptions:{color:'#E85718',weight:3,fillOpacity:.06}},polyline:false,rectangle:{shapeOptions:{color:'#E85718',weight:3,fillOpacity:.06}},circle:false,marker:false,circlemarker:false},
     edit:false
   });
-  map.on(L.Draw.Event.CREATED,e=>{ drawnLayer.clearLayers(); drawnLayer.addLayer(e.layer); const gj=e.layer.toGeoJSON(); runAnalysis(gj.geometry); });
+  map.on(L.Draw.Event.CREATED,e=>{ drawnLayer.clearLayers(); drawnLayer.addLayer(e.layer); const gj=e.layer.toGeoJSON(); runAnalysis(gj.geometry,'desenho'); });
   loadCerradoBoundary();
 }
 let PbfLib2=null;
@@ -372,7 +412,8 @@ function rank(obj){ // -> [{cd, area, pct, ...cls}]
   return Object.entries(obj).map(([cd,a])=>Object.assign({cd,area:a,pct:a/tot*100},cls(cd))).sort((x,y)=>y.area-x.area);
 }
 
-async function runAnalysis(geom){
+async function runAnalysis(geom,origem){
+  origem=origem||'desenho';
   try{
     setStatus('Analisando a área…');
     document.getElementById('results').innerHTML='<div class="proc"><div class="ring"><i></i><i></i><i></i><div class="drop"><svg viewBox="0 0 24 32"><path d="M12 0C12 0 2 12 2 20a10 10 0 0 0 20 0C22 12 12 0 12 0z"/></svg></div></div><div class="ptxt">Analisando a área…</div><div class="psub">Cruzando o polígono com as sub-bacias da APCAC</div></div>';
@@ -387,9 +428,11 @@ async function runAnalysis(geom){
       setStatus('Fora da área de análise (Cerrado).',true);
       document.getElementById('results').innerHTML='<div class="res-empty"><span class="big">Fora do Cerrado</span>O polígono não intercepta as sub-bacias analisadas pela APCAC. A ferramenta cobre a zona de influência hidrológica do bioma Cerrado.</div>';
       document.getElementById('scaletabs').style.display='none';
+      saveAnalysis(res,origem);
       return;
     }
     setStatus('Análise concluída — '+res.nbasins+' sub-bacia(s), '+fmt(res.total_ha)+' ha.');
+    saveAnalysis(res,origem);
     document.getElementById('scaletabs').style.display='flex';
     renderResults();
   }catch(e){ console.error(e); setStatus('Erro na análise: '+e.message,true); }
@@ -477,12 +520,12 @@ function capRegion(u){ return u.split(' ').map(w=>w.length<=3&&w!=='SÃO'?w.toLo
 /* ============================ UPLOAD & DRAW UI ============================ */
 function wire(){
   const dz=document.getElementById('dz'), file=document.getElementById('file');
-  dz.onclick=()=>file.click();
+  dz.onclick=()=>{ if(!requireLogin())return; file.click(); };
   dz.ondragover=e=>{e.preventDefault();dz.classList.add('drag');};
   dz.ondragleave=()=>dz.classList.remove('drag');
-  dz.ondrop=e=>{e.preventDefault();dz.classList.remove('drag');if(e.dataTransfer.files[0])handleZip(e.dataTransfer.files[0]);};
+  dz.ondrop=e=>{e.preventDefault();dz.classList.remove('drag');if(!requireLogin())return;if(e.dataTransfer.files[0])handleZip(e.dataTransfer.files[0]);};
   file.onchange=e=>{if(e.target.files[0])handleZip(e.target.files[0]);};
-  document.getElementById('drawBtn').onclick=()=>{ try{window._drawH&&window._drawH.disable();}catch(e){} window._drawH=new L.Draw.Polygon(map,drawControl.options.draw.polygon); window._drawH.enable(); setStatus('Desenhe o polígono: clique nos vértices e feche no primeiro ponto (ou duplo-clique).'); };
+  document.getElementById('drawBtn').onclick=()=>{ if(!requireLogin())return; try{window._drawH&&window._drawH.disable();}catch(e){} window._drawH=new L.Draw.Polygon(map,drawControl.options.draw.polygon); window._drawH.enable(); setStatus('Desenhe o polígono: clique nos vértices e feche no primeiro ponto (ou duplo-clique).'); };
   document.getElementById('clearBtn').onclick=()=>{ drawnLayer.clearLayers(); document.getElementById('results').innerHTML='<div class="res-empty"><span class="big">Resultado</span>Informe ou desenhe uma área.</div>'; document.getElementById('scaletabs').style.display='none'; setStatus('Limpo.'); };
   document.querySelectorAll('#scaletabs button').forEach(btn=>btn.onclick=()=>{
     document.querySelectorAll('#scaletabs button').forEach(b=>b.classList.remove('on')); btn.classList.add('on');
@@ -501,11 +544,148 @@ async function handleZip(f){
     for(let i=1;i<polys.length;i++){ try{ merged=turf.union(merged,polys[i]); }catch(e){} }
     drawnLayer.clearLayers();
     L.geoJSON(merged,{style:{color:'#E85718',weight:3,fillOpacity:.06}}).eachLayer(l=>drawnLayer.addLayer(l));
-    runAnalysis(merged.geometry);
+    runAnalysis(merged.geometry,'upload');
   }catch(e){ console.error(e); setStatus('Não consegui ler o shapefile: '+e.message,true); }
 }
 
-window.addEventListener('load',()=>{ initMap(); wire(); });
+/* ============================ v2: LOGIN + HISTÓRICO (Supabase) ============================ */
+const SB_URL='https://uxjbijdalriulmtofunn.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV4amJpamRhbHJpdWxtdG9mdW5uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUwOTc3OTQsImV4cCI6MjEwMDY3Mzc5NH0.0NSUVezXUaZTpxyJ017VZlRVFqTVmJH4xhLSB_hUeys';
+const sb=window.supabase.createClient(SB_URL,SB_KEY);
+let sbUser=null;
+const isAdmin=()=>!!(sbUser&&/@cerrados\.org$/i.test(sbUser.email||''));
+
+const G_SVG='<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>';
+
+async function initAuth(){
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    setUser(session?session.user:null);
+    sb.auth.onAuthStateChange((_e,s)=>setUser(s?s.user:null));
+  }catch(e){ console.warn('auth:',e); renderAuthUI(); }
+}
+function setUser(u){ sbUser=u; renderAuthUI(); }
+function renderAuthUI(){
+  const box=document.getElementById('authBox'); if(!box)return;
+  if(!sbUser){ box.innerHTML='<button class="abtn gbtn" onclick="loginGoogle()">'+G_SVG+' Entrar com Google</button>'; return; }
+  const av=(sbUser.user_metadata&&sbUser.user_metadata.avatar_url)||'';
+  const nm=(sbUser.user_metadata&&(sbUser.user_metadata.full_name||sbUser.user_metadata.name))||sbUser.email;
+  box.innerHTML=(isAdmin()?'<button class="abtn" onclick="openAdmin()">Histórico</button>':'')+
+    '<span class="chip">'+(av?'<img src="'+av+'" alt="" referrerpolicy="no-referrer">':'')+'<span class="nm">'+esc2(nm)+'</span></span>'+
+    '<button class="abtn" onclick="logout()">Sair</button>';
+}
+function esc2(s){return String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+async function loginGoogle(){
+  try{ await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname}}); }
+  catch(e){ alert('Não foi possível iniciar o login: '+e.message); }
+}
+async function logout(){ try{ await sb.auth.signOut(); }catch(e){} }
+
+function requireLogin(){
+  if(sbUser) return true;
+  showLoginModal(); return false;
+}
+function showLoginModal(){
+  closeLoginModal();
+  const ov=document.createElement('div'); ov.className='modal-ov'; ov.id='loginOv';
+  ov.innerHTML='<div class="modal modal-card"><button class="xclose" onclick="closeLoginModal()">×</button>'+
+   '<h3>Entre para analisar</h3>'+
+   '<p>Para rodar a análise — enviar um shapefile ou desenhar um polígono — é preciso se identificar. O acesso é gratuito e serve para registrarmos o uso da ferramenta.</p>'+
+   '<button class="gbig" onclick="loginGoogle()">'+G_SVG+' Entrar com Google</button>'+
+   '<div class="priv">Guardamos apenas: seu nome e email do Google, o polígono analisado e a data/hora de cada análise. Nada é publicado nem compartilhado.</div></div>';
+  ov.addEventListener('click',e=>{ if(e.target===ov) closeLoginModal(); });
+  document.body.appendChild(ov);
+}
+function closeLoginModal(){ const o=document.getElementById('loginOv'); if(o)o.remove(); }
+
+async function saveAnalysis(r,origem){
+  if(!sbUser||!r||!r.geom) return;
+  try{
+    let g=r.geom, gs=JSON.stringify(g);
+    if(gs.length>900000){ try{ g=turf.simplify(g,{tolerance:0.0005,highQuality:false}); gs=JSON.stringify(g); }catch(e){} }
+    if(gs.length>900000){ try{ g=turf.simplify(g,{tolerance:0.002,highQuality:false}); gs=JSON.stringify(g); }catch(e){} }
+    const dentro=r.total_ha>0&&Object.keys(r.agg.cd_cerrado).length>0;
+    const top=k=>{ const rr=rank(r.agg[k]); return rr.length?{cd:rr[0].cd,prio:rr[0].prio,acao:rr[0].acao,risco:rr[0].risco,pct:Math.round(rr[0].pct*10)/10}:null; };
+    await sb.from('analises').insert({
+      user_id:sbUser.id, email:sbUser.email,
+      nome:(sbUser.user_metadata&&(sbUser.user_metadata.full_name||sbUser.user_metadata.name))||null,
+      origem, area_ha:Math.round(r.total_ha*100)/100, dentro,
+      geojson:JSON.parse(gs),
+      resultado:dentro?{region:r.region,nbasins:r.nbasins,bioma:top('cd_cerrado'),rhi:top('cd_rhi'),uph:top('cd_uph')}:{fora:true}
+    });
+  }catch(e){ console.warn('não gravou histórico:',e); }
+}
+
+/* -------- painel admin -------- */
+let admPage=0; const ADM_PP=50;
+async function openAdmin(){
+  if(!isAdmin())return;
+  closeAdmin();
+  const ov=document.createElement('div'); ov.className='admin-ov'; ov.id='adminOv';
+  ov.innerHTML='<div class="admin"><div class="ah"><h3>Histórico de uso</h3>'+
+   '<button onclick="admCSV()">Exportar CSV</button><button onclick="closeAdmin()">Fechar</button></div>'+
+   '<div class="abody"><table><thead><tr><th>Data/hora</th><th>Usuário</th><th>Origem</th><th>Área (ha)</th><th>Dentro?</th><th>Classe (bioma)</th><th></th></tr></thead><tbody id="admRows"><tr><td colspan="7" style="padding:24px;text-align:center;color:var(--cinza)">Carregando…</td></tr></tbody></table></div>'+
+   '<div class="af"><button id="admPrev" onclick="admNav(-1)">‹ Anteriores</button><button id="admNext" onclick="admNav(1)">Próximas ›</button><span id="admInfo"></span></div></div>';
+  ov.addEventListener('click',e=>{ if(e.target===ov) closeAdmin(); });
+  document.body.appendChild(ov);
+  admPage=0; admLoad();
+}
+function closeAdmin(){ const o=document.getElementById('adminOv'); if(o)o.remove(); }
+function admNav(d){ admPage=Math.max(0,admPage+d); admLoad(); }
+let admCache=[];
+async function admLoad(){
+  const tb=document.getElementById('admRows'); if(!tb)return;
+  const from=admPage*ADM_PP, to=from+ADM_PP-1;
+  const {data,error,count}=await sb.from('analises').select('id,created_at,email,nome,origem,area_ha,dentro,resultado,geojson',{count:'exact'}).order('created_at',{ascending:false}).range(from,to);
+  if(error){ tb.innerHTML='<tr><td colspan="7" style="padding:24px;color:#a12">Erro: '+esc2(error.message)+'</td></tr>'; return; }
+  admCache=data||[];
+  if(!admCache.length){ tb.innerHTML='<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--cinza)">Nenhuma análise registrada ainda.</td></tr>'; }
+  else tb.innerHTML=admCache.map((r,i)=>{
+    const dt=new Date(r.created_at).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
+    const cb=r.resultado&&r.resultado.bioma?r.resultado.bioma.prio:(r.dentro===false?'—':'');
+    return '<tr><td>'+dt+'</td><td title="'+esc2(r.email)+'">'+esc2(r.nome||r.email)+'</td>'+
+      '<td><span class="og '+r.origem+'">'+r.origem+'</span></td>'+
+      '<td style="text-align:right">'+(r.area_ha!=null?Number(r.area_ha).toLocaleString('pt-BR'):'')+'</td>'+
+      '<td>'+(r.dentro?'Sim':'Não')+'</td><td>'+esc2(cb)+'</td>'+
+      '<td><button class="tbtn" onclick="admVer('+i+')">Ver no mapa</button> <button class="tbtn" onclick="admGeo('+i+')">GeoJSON</button></td></tr>';
+  }).join('');
+  const info=document.getElementById('admInfo'); if(info) info.textContent=(count!=null?count+' análises · ':'')+'página '+(admPage+1);
+  const prev=document.getElementById('admPrev'); if(prev) prev.disabled=admPage===0;
+  const next=document.getElementById('admNext'); if(next) next.disabled=(count!=null&&to>=count-1);
+}
+function admVer(i){
+  const r=admCache[i]; if(!r||!r.geojson)return;
+  closeAdmin();
+  drawnLayer.clearLayers();
+  const ly=L.geoJSON(r.geojson,{style:{color:'#E85718',weight:3,fillOpacity:.06}});
+  ly.eachLayer(l=>drawnLayer.addLayer(l));
+  try{ map.fitBounds(ly.getBounds(),{padding:[40,40],maxZoom:12}); }catch(e){}
+  setStatus('Exibindo análise de '+(r.nome||r.email)+' ('+new Date(r.created_at).toLocaleString('pt-BR')+').');
+}
+function admGeo(i){
+  const r=admCache[i]; if(!r||!r.geojson)return;
+  const blob=new Blob([JSON.stringify(r.geojson)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='analise_'+r.id.slice(0,8)+'.geojson'; a.click();
+}
+async function admCSV(){
+  let all=[], from=0;
+  while(true){
+    const {data,error}=await sb.from('analises').select('created_at,email,nome,origem,area_ha,dentro,resultado').order('created_at',{ascending:false}).range(from,from+999);
+    if(error){ alert('Erro no export: '+error.message); return; }
+    all=all.concat(data||[]); if(!data||data.length<1000)break; from+=1000;
+  }
+  const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const rows=[['data_hora','email','nome','origem','area_ha','dentro_cerrado','regiao','classe_bioma','acao_bioma'].join(';')];
+  for(const r of all){
+    const b=r.resultado&&r.resultado.bioma?r.resultado.bioma:{};
+    rows.push([q(new Date(r.created_at).toLocaleString('pt-BR')),q(r.email),q(r.nome),q(r.origem),q(r.area_ha),q(r.dentro?'sim':'não'),q(r.resultado?r.resultado.region:''),q(b.prio||''),q(b.acao||'')].join(';'));
+  }
+  const blob=new Blob(['﻿'+rows.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='apcac_historico.csv'; a.click();
+}
+
+window.addEventListener('load',()=>{ initMap(); wire(); initAuth(); });
 </script>
 </body>
 </html>
