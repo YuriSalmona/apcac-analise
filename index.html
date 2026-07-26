@@ -248,7 +248,7 @@ const SCALE_NAME={cd_cerrado:'Bioma Cerrado',cd_rhi:'Região Hidrográfica',cd_u
 const RASTER={cd_cerrado:'cerrado_raster.pmtiles',cd_rhi:'rhi_raster.pmtiles',cd_uph:'uph_raster.pmtiles'};
 
 /* ============================ MAPA ============================ */
-let map, drawnLayer, rasterLayer, currentScale='cd_cerrado', lastResult=null, limRHI=null;
+let map, drawnLayer, rasterLayer, currentScale='cd_cerrado', lastResult=null, limRHI=null, layersCtl=null, cerBoundaryLayer=null;
 const carto=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20,attribution:'© OpenStreetMap © CARTO'});
 const esri=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Esri'});
 function setStatus(t,err){const s=document.getElementById('status');s.textContent=t;s.className='status'+(err?' err':'');}
@@ -257,7 +257,7 @@ function initMap(){
   map=L.map('map',{center:[-15.0,-49.5],zoom:4,zoomControl:true});
   carto.addTo(map);
   setRaster('cd_cerrado');
-  L.control.layers({'Claro (CARTO)':carto,'Satélite (Esri)':esri},{},{position:'bottomleft',collapsed:true}).addTo(map);
+  layersCtl=L.control.layers({'Claro (CARTO)':carto,'Satélite (Esri)':esri},{},{position:'bottomleft',collapsed:true}).addTo(map);
   // legenda — padrão do webmap APCAC
   const LEGGROUPS=[
     {a:'Comando e Controle',r:'Risco de Desmatamento',c:['#550000','#800000','#d40000']},
@@ -288,6 +288,28 @@ function initMap(){
     edit:false
   });
   map.on(L.Draw.Event.CREATED,e=>{ drawnLayer.clearLayers(); drawnLayer.addLayer(e.layer); const gj=e.layer.toGeoJSON(); runAnalysis(gj.geometry); });
+  loadCerradoBoundary();
+}
+let PbfLib2=null;
+async function ensurePC(){ if(!window.__pc){ window.__pc=(await import('https://esm.sh/polygon-clipping@0.15.7')).default; } return window.__pc; }
+async function loadCerradoBoundary(){
+  try{
+    const VT=await ensureVT(); const pc=await ensurePC();
+    const pieces=[];
+    for(const [x,y] of [[2,4],[3,4]]){
+      const t=await limPM.getZxy(3,x,y); if(!t||!t.data)continue;
+      const vt=new VT.VectorTile(new (window.Pbf)(await decomp(t.data)));
+      const L2=vt.layers['lim_cerrado']; if(!L2)continue;
+      for(let i=0;i<L2.length;i++){ const g=L2.feature(i).toGeoJSON(x,y,3).geometry; if(g.type==='Polygon')pieces.push(g.coordinates); else if(g.type==='MultiPolygon')g.coordinates.forEach(p=>pieces.push(p)); }
+    }
+    if(!pieces.length)return;
+    let u=pieces; try{ u=pc.union(...pieces.map(p=>[p])); }catch(e){}
+    const gj={type:'Feature',properties:{},geometry:{type:'MultiPolygon',coordinates:u}};
+    cerBoundaryLayer=L.geoJSON(gj,{style:{color:'#004F23',weight:1.7,opacity:.95,fill:false,dashArray:'5,4'},interactive:false});
+    cerBoundaryLayer.addTo(map);
+    if(layersCtl) layersCtl.addOverlay(cerBoundaryLayer,'Limite do Cerrado (bioma)');
+    if(drawnLayer) drawnLayer.bringToFront();
+  }catch(e){ console.warn('limite Cerrado:',e); }
 }
 function legRow(name,cols){let s='<div class="lr">';for(const c of cols)s+='<span class="lc" style="background:'+c+'"></span>';s+=name+'</div>';return s;}
 let drawControl;
