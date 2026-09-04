@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>APCAC — Está dentro? | Instituto Cerrados</title>
-<meta name="description" content="Ferramenta de análise: verifica se um local está dentro de uma Área Prioritária para Conservação de Água do Cerrado (APCAC) e detalha a classe, o risco e a ação recomendada.">
+<title>APIAC — Está dentro? | Instituto Cerrados</title>
+<meta name="description" content="Ferramenta de análise: verifica se um local está dentro de uma Área Prioritária para Infiltração de Água no Cerrado (APIAC) e detalha a classe, o risco e a ação recomendada.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Londrina+Solid:wght@400&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -52,6 +52,10 @@ h2.sec{font-family:var(--tit);color:var(--verde);font-size:19px;margin:0 0 4px}
 .sep{display:flex;align-items:center;gap:10px;color:var(--cinza);font-size:12px;margin:16px 0;text-transform:uppercase;letter-spacing:.1em}
 .sep::before,.sep::after{content:"";flex:1;height:1px;background:var(--linha)}
 .scaletabs{display:flex;gap:6px;margin:0 0 10px}
+.mapscale{background:#fff;border:1px solid var(--linha);border-radius:9px;padding:8px 9px;box-shadow:0 1px 6px rgba(0,0,0,.13);font-family:var(--corpo)}
+.mapscale b{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--cinza);margin-bottom:6px;font-weight:700}
+.mapscale button{display:block;width:100%;text-align:left;border:1px solid var(--linha);background:#fff;color:var(--cinza);font-family:var(--corpo);font-weight:600;font-size:11.5px;padding:5px 9px;border-radius:6px;cursor:pointer;margin-top:4px}
+.mapscale button.on{background:var(--verde);color:#fff;border-color:var(--verde)}
 .scaletabs button{flex:1;border:1px solid var(--linha);background:#fff;color:var(--cinza);font-family:var(--corpo);font-weight:600;font-size:12px;padding:7px 4px;border-radius:7px;cursor:pointer}
 .scaletabs button.on{background:var(--verde);color:#fff;border-color:var(--verde)}
 .status{font-size:12px;color:var(--cinza);padding:8px 10px;background:var(--bege-cl);border-radius:7px;margin-top:8px;min-height:18px}
@@ -81,7 +85,7 @@ h2.sec{font-family:var(--tit);color:var(--verde);font-size:19px;margin:0 0 4px}
 .foot{font-size:11px;color:var(--cinza);border-top:1px solid var(--linha);padding-top:10px;margin-top:14px;line-height:1.5}
 .dlbtns{display:flex;gap:8px;margin-top:8px}
 .dlbtns .btn{margin-top:0}
-/* leaflet legend — padrão do webmap APCAC */
+/* leaflet legend — padrão do webmap APIAC */
 .leg{background:#fff;padding:10px 12px;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,.18);font-size:11px;line-height:1.4;width:232px;max-height:62vh;overflow:auto}
 .leg .lt{font-family:var(--tit);color:var(--verde);font-size:12.5px;letter-spacing:.02em;margin-bottom:2px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
 .leg .lt .cx{color:var(--cinza);font-family:var(--corpo);font-weight:700;font-size:13px}
@@ -155,8 +159,8 @@ h2.sec{font-family:var(--tit);color:var(--verde);font-size:19px;margin:0 0 4px}
 </head>
 <body>
 <header>
-  <div class="brand">APCAC<small>INSTITUTO CERRADOS</small></div>
-  <div class="ttl">Este local está numa <b>Área Prioritária para Conservação de Água</b>?</div>
+  <div class="brand">APIAC<small>INSTITUTO CERRADOS</small></div>
+  <div class="ttl">Este local está numa <b>Área Prioritária para Infiltração de Água</b>?</div>
   <a class="lnk" href="https://yurisalmona.github.io/apcac-nota/" target="_blank" rel="noopener">Nota técnica</a>
   <div class="auth" id="authBox"></div>
 </header>
@@ -164,7 +168,7 @@ h2.sec{font-family:var(--tit);color:var(--verde);font-size:19px;margin:0 0 4px}
   <!-- INPUT -->
   <aside class="panel"><div class="pad">
     <h2 class="sec">1 · Informe a área</h2>
-    <p class="hint">Envie um shapefile compactado (.zip) ou desenhe um polígono no mapa. A ferramenta identifica em qual classe da APCAC a área se enquadra, nas três escalas de análise.</p>
+    <p class="hint">Envie um shapefile compactado (.zip) ou desenhe um polígono no mapa. A ferramenta identifica em qual classe da APIAC a área se enquadra, nas três escalas de análise.</p>
 
     <div class="card">
       <h3><span class="n">A</span> Upload de shapefile (.zip)</h3>
@@ -184,7 +188,7 @@ h2.sec{font-family:var(--tit);color:var(--verde);font-size:19px;margin:0 0 4px}
     <div id="status" class="status">Pronto. Aguardando uma área.</div>
 
     <div class="foot">
-      Base de dados: APCAC — Termo de Cooperação MMA nº 04/2024, execução Instituto Cerrados &amp; IPH-UFRGS.
+      Base de dados: APIAC — Termo de Cooperação MMA nº 04/2024, execução Instituto Cerrados &amp; IPH-UFRGS.
       A classificação é feita por interseção com as sub-bacias (malha BHO) do estudo, nas escalas de bioma, região hidrográfica e unidade de planejamento hídrico.
     </div>
   </div></aside>
@@ -200,7 +204,7 @@ h2.sec{font-family:var(--tit);color:var(--verde);font-size:19px;margin:0 0 4px}
       <button data-s="cd_uph">UPH</button>
     </div>
     <div id="results">
-      <div class="res-empty"><span class="big">Resultado</span>Informe ou desenhe uma área para ver aqui a classificação APCAC, a leitura cartográfica e a interpretação técnica.</div>
+      <div class="res-empty"><span class="big">Resultado</span>Informe ou desenhe uma área para ver aqui a classificação APIAC, a leitura cartográfica e a interpretação técnica.</div>
     </div>
   </div></aside>
 </div>
@@ -212,7 +216,9 @@ h2.sec{font-family:var(--tit);color:var(--verde);font-size:19px;margin:0 0 4px}
 <script src="https://unpkg.com/pmtiles@3.2.0/dist/pmtiles.js"></script>
 <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
 <script src="https://unpkg.com/pbf@3.2.1/dist/pbf.js"></script>
-<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<!-- login desativado: o projeto Supabase foi excluido. Para religar, restaure o script,
+     aponte SB_URL/SB_KEY para o projeto novo e mude AUTH_ON para true.
+<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script> -->
 <script>
 /* ============================ DADOS ============================ */
 const BASE='https://yurisalmona.github.io/apcac-webmap/';
@@ -289,16 +295,21 @@ const RASTER={cd_cerrado:'cerrado_raster.pmtiles',cd_rhi:'rhi_raster.pmtiles',cd
 
 /* ============================ MAPA ============================ */
 let map, drawnLayer, rasterLayer, currentScale='cd_cerrado', lastResult=null, limRHI=null, layersCtl=null, cerBoundaryLayer=null;
-const carto=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20,attribution:'© OpenStreetMap © CARTO'});
-const esri=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Esri'});
+const ESRI_ATTR='Esri, HERE, Garmin, © OpenStreetMap contributors';
+const carto=L.layerGroup([
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',{maxNativeZoom:16,maxZoom:20,attribution:ESRI_ATTR}),
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}',{maxNativeZoom:16,maxZoom:20})
+]);
+const esri=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxNativeZoom:19,maxZoom:20,attribution:'Esri, Maxar, Earthstar Geographics'});
 function setStatus(t,err){const s=document.getElementById('status');s.textContent=t;s.className='status'+(err?' err':'');}
 
 function initMap(){
   map=L.map('map',{center:[-15.0,-49.5],zoom:4,zoomControl:true});
   carto.addTo(map);
   setRaster('cd_cerrado');
-  layersCtl=L.control.layers({'Claro (CARTO)':carto,'Satélite (Esri)':esri},{},{position:'bottomleft',collapsed:true}).addTo(map);
-  // legenda — padrão do webmap APCAC
+  addScaleControl();
+  layersCtl=L.control.layers({'Claro (Esri)':carto,'Satélite (Esri)':esri},{},{position:'bottomleft',collapsed:true}).addTo(map);
+  // legenda — padrão do webmap APIAC
   const LEGGROUPS=[
     {a:'Comando e Controle',r:'Risco de Desmatamento',c:['#550000','#800000','#d40000']},
     {a:'Proteção',r:'Risco de Desmatamento',c:['#1c4942','#248248','#51a24c']},
@@ -353,10 +364,31 @@ async function loadCerradoBoundary(){
 }
 function legRow(name,cols){let s='<div class="lr">';for(const c of cols)s+='<span class="lc" style="background:'+c+'"></span>';s+=name+'</div>';return s;}
 let drawControl;
+const MS_LABEL={cd_cerrado:'Bioma Cerrado',cd_rhi:'Região Hidrográfica',cd_uph:'UPH'};
+function applyScale(s){
+  if(!RASTER[s]) return;
+  currentScale=s;
+  setRaster(s);
+  document.querySelectorAll('#scaletabs button').forEach(b=>b.classList.toggle('on',b.dataset.s===s));
+  document.querySelectorAll('.mapscale button').forEach(b=>b.classList.toggle('on',b.dataset.ms===s));
+  if(lastResult) renderResults();
+}
+function addScaleControl(){
+  const c=L.control({position:'topright'});
+  c.onAdd=function(){
+    const d=L.DomUtil.create('div','mapscale');
+    d.innerHTML='<b>Escala do mapa</b>'+Object.keys(MS_LABEL).map(k=>
+      '<button data-ms="'+k+'"'+(k===currentScale?' class="on"':'')+'>'+MS_LABEL[k]+'</button>').join('');
+    L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
+    d.querySelectorAll('button').forEach(b=>b.onclick=()=>applyScale(b.dataset.ms));
+    return d;
+  };
+  c.addTo(map);
+}
 function setRaster(scale){
   if(rasterLayer) map.removeLayer(rasterLayer);
   const src=new pmtiles.PMTiles(BASE+RASTER[scale]);
-  rasterLayer=pmtiles.leafletRasterLayer(src,{maxNativeZoom:9,minZoom:3,maxZoom:20,opacity:.82,attribution:'APCAC — Instituto Cerrados/IPH-UFRGS'});
+  rasterLayer=pmtiles.leafletRasterLayer(src,{maxNativeZoom:9,minZoom:3,maxZoom:20,opacity:.82,attribution:'APIAC — Instituto Cerrados/IPH-UFRGS'});
   rasterLayer.addTo(map);
   if(drawnLayer) drawnLayer.bringToFront();
 }
@@ -416,7 +448,7 @@ async function runAnalysis(geom,origem){
   origem=origem||'desenho';
   try{
     setStatus('Analisando a área…');
-    document.getElementById('results').innerHTML='<div class="proc"><div class="ring"><i></i><i></i><i></i><div class="drop"><svg viewBox="0 0 24 32"><path d="M12 0C12 0 2 12 2 20a10 10 0 0 0 20 0C22 12 12 0 12 0z"/></svg></div></div><div class="ptxt">Analisando a área…</div><div class="psub">Cruzando o polígono com as sub-bacias da APCAC</div></div>';
+    document.getElementById('results').innerHTML='<div class="proc"><div class="ring"><i></i><i></i><i></i><div class="drop"><svg viewBox="0 0 24 32"><path d="M12 0C12 0 2 12 2 20a10 10 0 0 0 20 0C22 12 12 0 12 0z"/></svg></div></div><div class="ptxt">Analisando a área…</div><div class="psub">Cruzando o polígono com as sub-bacias da APIAC</div></div>';
     // normalize to Feature<Polygon/MultiPolygon>
     let poly=geom.type==='Feature'?geom:turf.feature(geom);
     if(poly.geometry.type!=='Polygon'&&poly.geometry.type!=='MultiPolygon'){ setStatus('A geometria não é um polígono.',true); return; }
@@ -426,7 +458,7 @@ async function runAnalysis(geom,origem){
     res.region=region; res.geom=poly; lastResult=res;
     if(res.total_ha<=0||Object.keys(res.agg.cd_cerrado).length===0){
       setStatus('Fora da área de análise (Cerrado).',true);
-      document.getElementById('results').innerHTML='<div class="res-empty"><span class="big">Fora do Cerrado</span>O polígono não intercepta as sub-bacias analisadas pela APCAC. A ferramenta cobre a zona de influência hidrológica do bioma Cerrado.</div>';
+      document.getElementById('results').innerHTML='<div class="res-empty"><span class="big">Fora do Cerrado</span>O polígono não intercepta as sub-bacias analisadas pela APIAC. A ferramenta cobre a zona de influência hidrológica do bioma Cerrado.</div>';
       document.getElementById('scaletabs').style.display='none';
       saveAnalysis(res,origem);
       return;
@@ -464,7 +496,7 @@ function renderResults(){
   // texto
   html+='<div class="texto" id="laudo">'+buildText(r,scaleRanks)+'</div>';
   html+='<div class="dlbtns"><button class="btn ghost" id="dlText">Copiar laudo</button><button class="btn ghost" id="dlGeo">Baixar GeoJSON</button></div>';
-  html+='<div class="foot">Interpretação baseada exclusivamente na Nota Técnica APCAC (Instituto Cerrados / IPH-UFRGS, 2026). A ferramenta indica a classe predominante por escala; outras ações podem ser recomendadas em análises específicas.</div>';
+  html+='<div class="foot">Interpretação baseada exclusivamente na Nota Técnica APIAC (Instituto Cerrados / IPH-UFRGS, 2026). A ferramenta indica a classe predominante por escala; outras ações podem ser recomendadas em análises específicas.</div>';
   document.getElementById('results').innerHTML=html;
   setTimeout(()=>{document.querySelectorAll('#results .bar span').forEach(s=>{s.style.width=s.dataset.w+'%';});},40);
   document.getElementById('dlText').onclick=()=>{navigator.clipboard.writeText(document.getElementById('laudo').innerText);document.getElementById('dlText').textContent='Copiado ✓';};
@@ -507,7 +539,7 @@ function buildText(r,ranks){
        'Assim, uma mesma área pode figurar com menor destaque na escala de bioma, que realça as macroestruturas da paisagem, e ganhar prioridade nas escalas de Região Hidrográfica e de Unidade de Planejamento Hídrico, que revelam a distribuição interna de prioridades. As três escalas são complementares e respondem a diferentes níveis de decisão e governança.</p>';
   }
   // combinação da legenda
-  h+='<p>Vale lembrar que a legenda da APCAC combina, simultaneamente, três elementos: a <b>prioridade hidrológica</b>, que indica o potencial de regulação do fluxo por meio da infiltração; o <b>risco predominante</b>, que aponta as principais perdas ambientais no caso de não ação; e a <b>ação prioritária</b>, que orienta, de forma majoritária, o que deve ser feito na bacia.</p>';
+  h+='<p>Vale lembrar que a legenda da APIAC combina, simultaneamente, três elementos: a <b>prioridade hidrológica</b>, que indica o potencial de regulação do fluxo por meio da infiltração; o <b>risco predominante</b>, que aponta as principais perdas ambientais no caso de não ação; e a <b>ação prioritária</b>, que orienta, de forma majoritária, o que deve ser feito na bacia.</p>';
   // regular
   const anyRegularDom=['cd_cerrado','cd_rhi','cd_uph'].some(k=>ranks[k][0].prio==='Regular');
   if(anyRegularDom){
@@ -527,10 +559,7 @@ function wire(){
   file.onchange=e=>{if(e.target.files[0])handleZip(e.target.files[0]);};
   document.getElementById('drawBtn').onclick=()=>{ if(!requireLogin())return; try{window._drawH&&window._drawH.disable();}catch(e){} window._drawH=new L.Draw.Polygon(map,drawControl.options.draw.polygon); window._drawH.enable(); setStatus('Desenhe o polígono: clique nos vértices e feche no primeiro ponto (ou duplo-clique).'); };
   document.getElementById('clearBtn').onclick=()=>{ drawnLayer.clearLayers(); document.getElementById('results').innerHTML='<div class="res-empty"><span class="big">Resultado</span>Informe ou desenhe uma área.</div>'; document.getElementById('scaletabs').style.display='none'; setStatus('Limpo.'); };
-  document.querySelectorAll('#scaletabs button').forEach(btn=>btn.onclick=()=>{
-    document.querySelectorAll('#scaletabs button').forEach(b=>b.classList.remove('on')); btn.classList.add('on');
-    currentScale=btn.dataset.s; setRaster(currentScale); renderResults();
-  });
+  document.querySelectorAll('#scaletabs button').forEach(btn=>btn.onclick=()=>applyScale(btn.dataset.s));
 }
 async function handleZip(f){
   try{
@@ -551,13 +580,15 @@ async function handleZip(f){
 /* ============================ v2: LOGIN + HISTÓRICO (Supabase) ============================ */
 const SB_URL='https://uxjbijdalriulmtofunn.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV4amJpamRhbHJpdWxtdG9mdW5uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUwOTc3OTQsImV4cCI6MjEwMDY3Mzc5NH0.0NSUVezXUaZTpxyJ017VZlRVFqTVmJH4xhLSB_hUeys';
-const sb=window.supabase.createClient(SB_URL,SB_KEY);
+const AUTH_ON=false;   // <- true religa login e registro de uso
+const sb=(AUTH_ON&&window.supabase)?window.supabase.createClient(SB_URL,SB_KEY):null;
 let sbUser=null;
 const isAdmin=()=>!!(sbUser&&/@cerrados\.org$/i.test(sbUser.email||''));
 
 const G_SVG='<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>';
 
 async function initAuth(){
+  if(!AUTH_ON||!sb){ renderAuthUI(); return; }
   try{
     const {data:{session}}=await sb.auth.getSession();
     setUser(session?session.user:null);
@@ -567,6 +598,7 @@ async function initAuth(){
 function setUser(u){ sbUser=u; renderAuthUI(); }
 function renderAuthUI(){
   const box=document.getElementById('authBox'); if(!box)return;
+  if(!AUTH_ON){ box.innerHTML=''; return; }
   if(!sbUser){ box.innerHTML='<button class="abtn gbtn" onclick="loginGoogle()">'+G_SVG+' Entrar com Google</button>'; return; }
   const av=(sbUser.user_metadata&&sbUser.user_metadata.avatar_url)||'';
   const nm=(sbUser.user_metadata&&(sbUser.user_metadata.full_name||sbUser.user_metadata.name))||sbUser.email;
@@ -582,6 +614,7 @@ async function loginGoogle(){
 async function logout(){ try{ await sb.auth.signOut(); }catch(e){} }
 
 function requireLogin(){
+  if(!AUTH_ON) return true;
   if(sbUser) return true;
   showLoginModal(); return false;
 }
@@ -599,7 +632,7 @@ function showLoginModal(){
 function closeLoginModal(){ const o=document.getElementById('loginOv'); if(o)o.remove(); }
 
 async function saveAnalysis(r,origem){
-  if(!sbUser||!r||!r.geom) return;
+  if(!AUTH_ON||!sb||!sbUser||!r||!r.geom) return;
   try{
     let g=r.geom, gs=JSON.stringify(g);
     if(gs.length>900000){ try{ g=turf.simplify(g,{tolerance:0.0005,highQuality:false}); gs=JSON.stringify(g); }catch(e){} }
