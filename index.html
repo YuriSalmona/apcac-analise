@@ -446,9 +446,33 @@ async function classify(poly){
   }catch(e){}
   const x0=lon2t(bb[0],z),x1=lon2t(bb[2],z),y0=lat2t(bb[3],z),y1=lat2t(bb[1],z);
   const agg={cd_cerrado:{},cd_rhi:{},cd_uph:{}}; let total=0, basins=new Set();
+  // 1) O retângulo do polígono cobre tiles que ele nem toca (bacia não é caixa).
+  //    Descartar antes evita baixar e destrinchar tile à toa.
+  const t2lon=(x)=>x/Math.pow(2,z)*360-180;
+  const t2lat=(y)=>{const n=Math.PI-2*Math.PI*y/Math.pow(2,z);return 180/Math.PI*Math.atan(0.5*(Math.exp(n)-Math.exp(-n)));};
+  const alvos=[];
   for(let x=x0;x<=x1;x++)for(let y=y0;y<=y1;y++){
-    const t=await detPM.getZxy(z,x,y); if(!t||!t.data)continue;
-    const vt=new VT.VectorTile(new PbfLib(await decomp(t.data)));
+    let toca=true;
+    try{ toca=turf.booleanIntersects(turf.bboxPolygon([t2lon(x),t2lat(y+1),t2lon(x+1),t2lat(y)]),polyFast); }catch(e){}
+    if(toca) alvos.push([x,y]);
+  }
+  // 2) Baixar os tiles restantes EM PARALELO. Era um await por tile, em série:
+  //    numa bacia grande são dezenas de idas ao servidor, uma esperando a outra.
+  const brutos=new Array(alvos.length);
+  let prox=0;
+  const psub=document.querySelector('.proc .psub');
+  await Promise.all(Array.from({length:Math.min(8,alvos.length)},async()=>{
+    for(;;){
+      const i=prox++; if(i>=alvos.length) break;
+      try{ const t=await detPM.getZxy(z,alvos[i][0],alvos[i][1]); brutos[i]=t&&t.data?t.data:null; }catch(e){ brutos[i]=null; }
+      if(psub) psub.textContent='Lendo os dados da APIAC — '+Math.min(prox,alvos.length)+' de '+alvos.length+' blocos';
+    }
+  }));
+  // 3) Processar
+  for(let ti=0;ti<alvos.length;ti++){
+    const dados=brutos[ti]; if(!dados) continue;
+    const x=alvos[ti][0], y=alvos[ti][1];
+    const vt=new VT.VectorTile(new PbfLib(await decomp(dados)));
     const L2=vt.layers['apcac']; if(!L2)continue;
     for(let i=0;i<L2.length;i++){
       const f=L2.feature(i); const gj=f.toGeoJSON(x,y,z);
