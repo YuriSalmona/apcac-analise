@@ -491,8 +491,21 @@ async function classify(poly){
 
 function rank(obj){ // -> [{cd, area, pct, ...cls}]
   const tot=Object.values(obj).reduce((a,b)=>a+b,0)||1;
-  return Object.entries(obj).map(([cd,a])=>Object.assign({cd,area:a,pct:a/tot*100},cls(cd))).sort((x,y)=>y.area-x.area);
+  // As quatro classes ocultas (IX, IXR, IIX, IIXR) são UMA categoria só —
+  // "Regular sem risco de aridez", como no webmap. Listá-las separadas por
+  // ação e risco inventaria subclasses de Regular que não existem.
+  let regular=0; const itens=[];
+  for(const [cd,a] of Object.entries(obj)){
+    if(OCULTAS.includes(cd)){ regular+=a; continue; }
+    itens.push(Object.assign({cd,area:a,pct:a/tot*100},cls(cd)));
+  }
+  if(regular>0) itens.push({cd:'REG',area:regular,pct:regular/tot*100,cor:'transparent',oculta:true,
+    pred:'',prio:'Regular',acao:'',risco:'',rotulo:'Regular sem risco de aridez'});
+  return itens.sort((x,y)=>y.area-x.area);
 }
+// rótulo e complemento de uma classe, sem deixar " · " solto quando não há ação
+const rotuloCls=c=>c.rotulo||c.prio;
+const metaCls=c=>c.oculta?'não apresentada no mapa':[c.acao,c.risco].filter(Boolean).join(' · ');
 
 async function runAnalysis(geom,origem){
   origem=origem||'desenho';
@@ -550,14 +563,14 @@ function renderResults(){
   let html='<div class="verdict" style="background:linear-gradient(135deg,'+shade(vcol,-.12)+','+vcol+')">';
   html+='<div class="lbl">'+SCALE_NAME[currentScale]+'</div>';
   html+='<div class="big">'+(isPrior?'Área prioritária':'Importância regular')+'</div>';
-  html+='<div class="sub">Classe predominante: <b>'+dom.prio+'</b> · '+dom.acao+(dom.risco?(' · '+dom.risco):'')+'</div></div>';
+  html+='<div class="sub">Classe predominante: <b>'+rotuloCls(dom)+'</b>'+(metaCls(dom)?' · '+metaCls(dom):'')+'</div></div>';
   // scale cards (all three)
   for(const sc of ['cd_cerrado','cd_rhi','cd_uph']){
     const list=scaleRanks[sc]; if(!list.length)continue;
     html+='<div class="scalecard"><div class="st">'+SCALE_NAME[sc]+'</div>';
     html+='<div class="bar">'+list.map(c=>'<span data-w="'+c.pct.toFixed(1)+'" style="background:'+fundoCls(c)+'" title="'+c.prio+' '+c.pct.toFixed(1)+'%"></span>').join('')+'</div>';
     for(const c of list.slice(0,4)){
-      html+='<div class="classrow"><div class="sw" style="background:'+fundoCls(c)+'"></div><div class="cinfo"><div class="cprio">'+c.prio+'</div><div class="cmeta">'+c.acao+' · '+c.risco+'</div></div><div class="cpct">'+c.pct.toFixed(0)+'%</div></div>';
+      html+='<div class="classrow"><div class="sw" style="background:'+fundoCls(c)+'"></div><div class="cinfo"><div class="cprio">'+rotuloCls(c)+'</div><div class="cmeta">'+metaCls(c)+'</div></div><div class="cpct">'+c.pct.toFixed(0)+'%</div></div>';
     }
     html+='</div>';
   }
@@ -577,14 +590,19 @@ function pct(x){return x.pct.toFixed(x.pct<10?1:0).replace('.',',')+'%';}
 function scaleParagraph(scaleKey,list){
   const dom=list[0];
   let s='<b>'+SCALE_NAME[scaleKey]+'.</b> ';
-  s+='Nesta escala, a área é majoritariamente classificada como '+PRIO_TXT[dom.prio]+'. ';
-  if(dom.pred&&PRED_TXT[dom.pred]) s+='Trata-se de bacia '+PRED_TXT[dom.pred]+', na qual '+ACAO_TXT[dom.acao]+'. ';
-  else s+=ACAO_TXT[dom.acao].charAt(0).toUpperCase()+ACAO_TXT[dom.acao].slice(1)+'. ';
-  s+='Quanto ao risco, '+RISCO_TXT[dom.risco]+'.';
+  if(dom.oculta){
+    s+='Nesta escala, a área é majoritariamente de importância hidrológica regular sem risco de aridez — '+
+       'a única classe que não é apresentada no mapa, por não se destacar em nenhuma das três escalas.';
+  } else {
+    s+='Nesta escala, a área é majoritariamente classificada como '+PRIO_TXT[dom.prio]+'. ';
+    if(dom.pred&&PRED_TXT[dom.pred]) s+='Trata-se de bacia '+PRED_TXT[dom.pred]+', na qual '+ACAO_TXT[dom.acao]+'. ';
+    else s+=ACAO_TXT[dom.acao].charAt(0).toUpperCase()+ACAO_TXT[dom.acao].slice(1)+'. ';
+    s+='Quanto ao risco, '+RISCO_TXT[dom.risco]+'.';
+  }
   // sobreposições
   const others=list.slice(1).filter(c=>c.pct>=3);
   if(others.length){
-    s+=' Há sobreposição de classes: além da classe predominante ('+pct(dom)+'), a área também abrange '+others.map(c=>c.prio.toLowerCase()+', com '+c.acao.toLowerCase()+' sob '+c.risco.toLowerCase()+' ('+pct(c)+')').join('; ')+'.';
+    s+=' Há sobreposição de classes: além da classe predominante ('+pct(dom)+'), a área também abrange '+others.map(c=>c.oculta?('importância regular sem risco de aridez ('+pct(c)+')'):(c.prio.toLowerCase()+', com '+c.acao.toLowerCase()+' sob '+c.risco.toLowerCase()+' ('+pct(c)+')')).join('; ')+'.';
   }
   return '<p>'+s+'</p>';
 }
