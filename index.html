@@ -167,12 +167,12 @@ h2.sec{font-family:var(--tit);font-weight:700;color:var(--verde);font-size:19px;
   <!-- INPUT -->
   <aside class="panel"><div class="pad">
     <h2 class="sec">1 · Informe a área</h2>
-    <p class="hint">Envie um shapefile compactado (.zip) ou desenhe um polígono no mapa. A ferramenta identifica em qual classe da APIAC a área se enquadra, nas três escalas de análise.</p>
+    <p class="hint">Envie um shapefile compactado (.zip), um KML/KMZ, ou desenhe um polígono no mapa. A ferramenta identifica em qual classe da APIAC a área se enquadra, nas três escalas de análise.</p>
 
     <div class="card">
-      <h3><span class="n">A</span> Upload de shapefile (.zip)</h3>
-      <div class="dz" id="dz">Arraste o <b>.zip</b> aqui<br>ou clique para escolher<br><span style="font-size:11px">(deve conter .shp, .shx, .dbf e .prj)</span></div>
-      <input type="file" id="file" accept=".zip" style="display:none">
+      <h3><span class="n">A</span> Upload de arquivo (.zip, .kmz, .kml)</h3>
+      <div class="dz" id="dz">Arraste o <b>.zip</b>, <b>.kmz</b> ou <b>.kml</b> aqui<br>ou clique para escolher<br><span style="font-size:11px">(shapefile: .shp, .shx, .dbf e .prj no mesmo .zip)</span></div>
+      <input type="file" id="file" accept=".zip,.kmz,.kml" style="display:none">
     </div>
 
     <div class="sep">ou</div>
@@ -213,6 +213,7 @@ h2.sec{font-family:var(--tit);font-weight:700;color:var(--verde);font-size:19px;
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.min.js"></script>
+<script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://unpkg.com/pmtiles@3.2.0/dist/pmtiles.js"></script>
 <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
 <script src="https://unpkg.com/pbf@3.2.1/dist/pbf.js"></script>
@@ -561,20 +562,54 @@ function wire(){
   document.getElementById('clearBtn').onclick=()=>{ drawnLayer.clearLayers(); document.getElementById('results').innerHTML='<div class="res-empty"><span class="big lead">Veja aqui a classificação APIAC, a leitura cartográfica e a interpretação técnica</span></div>'; document.getElementById('scaletabs').style.display='none'; setStatus('Limpo.'); };
   document.querySelectorAll('#scaletabs button').forEach(btn=>btn.onclick=()=>applyScale(btn.dataset.s));
 }
+// togeojson só é baixado se o usuário mandar um KML — não pesa em quem usa shapefile
+let ToGeo=null;
+async function ensureKML(){ if(!ToGeo) ToGeo=await import('https://esm.sh/@tmcw/togeojson@5.8.1'); return ToGeo; }
+function kmlParaGeo(txt){
+  const doc=new DOMParser().parseFromString(txt,'application/xml');
+  if(doc.querySelector('parsererror')) throw new Error('o KML está malformado');
+  return ToGeo.kml(doc);
+}
+// KML costuma trazer MultiGeometry, que vira GeometryCollection: achata antes de filtrar
+function poligonosDe(fc){
+  const out=[];
+  for(const ft of (fc&&fc.features)||[]){
+    const g=ft.geometry; if(!g) continue;
+    const gs=g.type==='GeometryCollection'?(g.geometries||[]):[g];
+    for(const gg of gs) if(gg&&/Polygon/.test(gg.type)) out.push({type:'Feature',properties:ft.properties||{},geometry:gg});
+  }
+  return out;
+}
 async function handleZip(f){
   try{
-    setStatus('Lendo shapefile “'+f.name+'”…');
+    const nome=(f.name||'').toLowerCase();
+    setStatus('Lendo “'+f.name+'”…');
     const buf=await f.arrayBuffer();
-    const gj=await shp(buf); // FeatureCollection or array
-    const fc=Array.isArray(gj)?{type:'FeatureCollection',features:gj.flatMap(x=>x.features||[x])}:gj;
-    const polys=(fc.features||[]).filter(ft=>ft.geometry&&/Polygon/.test(ft.geometry.type));
-    if(!polys.length){ setStatus('O .zip não contém polígonos.',true); return; }
+    let fc=null;
+    if(nome.endsWith('.kml')){
+      await ensureKML(); fc=kmlParaGeo(new TextDecoder().decode(buf));
+    } else {
+      // .zip e .kmz são o mesmo container: olha dentro antes de decidir o leitor
+      let kmlTxt=null;
+      try{
+        const z=await window.JSZip.loadAsync(buf);
+        const alvo=Object.keys(z.files).filter(n=>!z.files[n].dir).find(n=>/\.kml$/i.test(n));
+        if(alvo) kmlTxt=await z.files[alvo].async('string');
+      }catch(e){ /* não abriu como zip: segue para o shapefile, que dá a mensagem certa */ }
+      if(kmlTxt){ await ensureKML(); fc=kmlParaGeo(kmlTxt); }
+      else {
+        const gj=await shp(buf); // FeatureCollection or array
+        fc=Array.isArray(gj)?{type:'FeatureCollection',features:gj.flatMap(x=>x.features||[x])}:gj;
+      }
+    }
+    const polys=poligonosDe(fc);
+    if(!polys.length){ setStatus('O arquivo não contém polígonos.',true); return; }
     let merged=polys[0];
     for(let i=1;i<polys.length;i++){ try{ merged=turf.union(merged,polys[i]); }catch(e){} }
     drawnLayer.clearLayers();
     L.geoJSON(merged,{style:{color:'#E85718',weight:3,fillOpacity:.06}}).eachLayer(l=>drawnLayer.addLayer(l));
     runAnalysis(merged.geometry,'upload');
-  }catch(e){ console.error(e); setStatus('Não consegui ler o shapefile: '+e.message,true); }
+  }catch(e){ console.error(e); setStatus('Não consegui ler o arquivo: '+e.message,true); }
 }
 
 /* ============================ v2: LOGIN + HISTÓRICO (Supabase) ============================ */
