@@ -317,7 +317,7 @@ function initMap(){
     {a:'Restauração Ecológica',r:'Risco Padrão',c:['#1f3a70','#376ea0','#458ea0']},
     {a:'Manejo do Solo e Revezamento Hídrico',r:'Risco de Aridez',c:['#ff9400','#ffa700','#ffba00']},
   ];
-  const LEGSINGLE=[{a:'Conjunto de Ações Diversas',r:'Risco de Aridez',c:'#ffdd81'},{a:'Regular sem risco de aridez',r:'não apresentada no mapa',c:'transparent'}];
+  const LEGSINGLE=[{a:'Conjunto de Ações Diversas',r:'Risco de Aridez',c:'#ffdd81'},{a:'Regular sem risco de aridez',r:'',c:'transparent'}];
   const SUBL=['Extremamente Alta','Muito Alta','Alta'];
   const lg=L.control({position:'bottomright'});
   lg.onAdd=function(){const d=L.DomUtil.create('div','leg');
@@ -325,7 +325,7 @@ function initMap(){
     for(const g of LEGGROUPS){ b+='<div class="grp"><div class="gh"><span class="gc" style="background:'+g.c[0]+'"></span>'+g.a+'</div><div class="gr">'+g.r+'</div>';
       for(let i=0;i<3;i++) b+='<div class="sub"><span class="lc" style="background:'+g.c[i]+'"></span>'+SUBL[i]+'</div>';
       b+='</div>'; }
-    for(const s of LEGSINGLE){ b+='<div class="grp"><div class="gh"><span class="gc" style="background:'+s.c+'"></span>'+s.a+'</div><div class="gr">'+s.r+'</div></div>'; }
+    for(const s of LEGSINGLE){ b+='<div class="grp"><div class="gh"><span class="gc" style="background:'+s.c+'"></span>'+s.a+'</div>'+(s.r?'<div class="gr">'+s.r+'</div>':'')+'</div>'; }
     b+='<div class="note">A ausência de categoria sobre uma área não significa falta de importância hidrológica.</div></div>';
     d.innerHTML=b;
     L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
