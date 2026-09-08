@@ -590,11 +590,18 @@ async function handleZip(f){
       await ensureKML(); fc=kmlParaGeo(new TextDecoder().decode(buf));
     } else {
       // .zip e .kmz são o mesmo container: olha dentro antes de decidir o leitor
-      let kmlTxt=null;
+      let kmlTxt=null, temShp=null;
       try{
         const z=await window.JSZip.loadAsync(buf);
-        const alvo=Object.keys(z.files).filter(n=>!z.files[n].dir).find(n=>/\.kml$/i.test(n));
+        const dentro=Object.keys(z.files).filter(n=>!z.files[n].dir);
+        const alvo=dentro.find(n=>/\.kml$/i.test(n));
+        temShp=dentro.some(n=>/\.shp$/i.test(n));
         if(alvo) kmlTxt=await z.files[alvo].async('string');
+        // shpjs erra em inglês ("no layers founds"); avisar antes, em português
+        if(!alvo && !temShp){
+          setStatus('O arquivo não tem .shp nem .kml dentro. Envie um shapefile (.shp, .shx, .dbf e .prj no mesmo .zip) ou um KML/KMZ.',true);
+          return;
+        }
       }catch(e){ /* não abriu como zip: segue para o shapefile, que dá a mensagem certa */ }
       if(kmlTxt){ await ensureKML(); fc=kmlParaGeo(kmlTxt); }
       else {
