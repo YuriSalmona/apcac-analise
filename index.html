@@ -249,7 +249,8 @@ const LEG={
 // Estas quatro não são pintadas no mapa (Regular sem risco de aridez). Tinham
 // cor no legenda.json, e a ferramenta as mostrava coloridas — divergindo do mapa.
 const OCULTAS=['IX','IXR','IIX','IIXR'];
-function cls(cd){ const v=LEG[cd]; if(!v) return {cd:cd||'—',cor:'#e8e8e8',oculta:true,pred:'—',prio:'Regular',acao:'Sem ação prioritária associada',risco:'Risco padrão de perda de vazão'}; return {cd,cor:v[0],oculta:OCULTAS.includes(cd),pred:v[1],prio:v[2],acao:v[3],risco:v[4]}; }
+function cls(cd){ const v=LEG[cd]; if(!v) return {cd:cd||'—',cor:'#e8e8e8',oculta:true,pred:'—',prio:'Regular',acao:'Sem ação prioritária associada',risco:'Risco padrão de perda de vazão'}; return {cd,cor:v[0],oculta:OCULTAS.includes(cd),pred:v[1],prio:v[2],acao:v[3],risco:v[4],
+          rotulo:cd==='XC'?'Regular com risco de aridez':undefined}; }
 // sem preenchimento e com contorno cinza, como a amostra vazia da legenda
 const fundoCls=c=>c.oculta?'transparent;box-shadow:inset 0 0 0 1px #9e9e9e':c.cor;
 const PRIO_ORDER={'Extremamente Alta':4,'Muito Alta':3,'Alta':2,'Regular':1};
@@ -568,7 +569,7 @@ function renderResults(){
   for(const sc of ['cd_cerrado','cd_rhi','cd_uph']){
     const list=scaleRanks[sc]; if(!list.length)continue;
     html+='<div class="scalecard"><div class="st">'+SCALE_NAME[sc]+'</div>';
-    html+='<div class="bar">'+list.map(c=>'<span data-w="'+c.pct.toFixed(1)+'" style="background:'+fundoCls(c)+'" title="'+c.prio+' '+c.pct.toFixed(1)+'%"></span>').join('')+'</div>';
+    html+='<div class="bar">'+list.map(c=>'<span data-w="'+c.pct.toFixed(1)+'" style="background:'+fundoCls(c)+'" title="'+rotuloCls(c)+' '+c.pct.toFixed(1)+'%"></span>').join('')+'</div>';
     for(const c of list.slice(0,4)){
       html+='<div class="classrow"><div class="sw" style="background:'+fundoCls(c)+'"></div><div class="cinfo"><div class="cprio">'+rotuloCls(c)+'</div><div class="cmeta">'+metaCls(c)+'</div></div><div class="cpct">'+c.pct.toFixed(0)+'%</div></div>';
     }
