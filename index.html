@@ -246,7 +246,12 @@ const LEG={
  IICC:['#ffba00','antrópica','Alta','Manejo do Solo e Reservação Hídrica','Risco de Aridez'],
  XC:['#ffdd81','mista','Regular','Conjunto de Ações Diversas','Risco de Aridez'],
 };
-function cls(cd){ const v=LEG[cd]; if(!v) return {cd:cd||'—',cor:'#e8e8e8',pred:'—',prio:'Regular',acao:'Sem ação prioritária associada',risco:'Risco padrão de perda de vazão'}; return {cd,cor:v[0],pred:v[1],prio:v[2],acao:v[3],risco:v[4]}; }
+// Estas quatro não são pintadas no mapa (Regular sem risco de aridez). Tinham
+// cor no legenda.json, e a ferramenta as mostrava coloridas — divergindo do mapa.
+const OCULTAS=['IX','IXR','IIX','IIXR'];
+function cls(cd){ const v=LEG[cd]; if(!v) return {cd:cd||'—',cor:'#e8e8e8',oculta:true,pred:'—',prio:'Regular',acao:'Sem ação prioritária associada',risco:'Risco padrão de perda de vazão'}; return {cd,cor:v[0],oculta:OCULTAS.includes(cd),pred:v[1],prio:v[2],acao:v[3],risco:v[4]}; }
+// sem preenchimento e com contorno cinza, como a amostra vazia da legenda
+const fundoCls=c=>c.oculta?'transparent;box-shadow:inset 0 0 0 1px #9e9e9e':c.cor;
 const PRIO_ORDER={'Extremamente Alta':4,'Muito Alta':3,'Alta':2,'Regular':1};
 
 // Caracterização de cada Região Hidrográfica (extraída da nota técnica — sem conhecimento novo)
@@ -421,9 +426,24 @@ async function regionName(poly){
   return null;
 }
 
+function contaVertices(c){ return Array.isArray(c[0][0]) ? c.reduce((s,p)=>s+contaVertices(p),0) : c.length; }
 async function classify(poly){
   const VT=await ensureVT();
   const bb=turf.bbox(poly), z=10;
+  // O gargalo é recortar CADA sub-bacia contra o polígono cru: um shapefile de
+  // bacia traz milhares de vértices e o custo do recorte cresce com eles.
+  // Simplificar antes (tolerância proporcional ao tamanho, no máximo ~110 m)
+  // não muda os totais — as sub-bacias do tile já vêm simplificadas.
+  let polyFast=poly;
+  try{
+    const nv=contaVertices(poly.geometry.coordinates);
+    if(nv>1500){
+      const diag=Math.max(bb[2]-bb[0],bb[3]-bb[1]);
+      const tol=Math.max(0.0001,Math.min(0.001,diag/1500));
+      const s=turf.simplify(poly,{tolerance:tol,highQuality:false});
+      if(s&&s.geometry&&contaVertices(s.geometry.coordinates)>3) polyFast=s;
+    }
+  }catch(e){}
   const x0=lon2t(bb[0],z),x1=lon2t(bb[2],z),y0=lat2t(bb[3],z),y1=lat2t(bb[1],z);
   const agg={cd_cerrado:{},cd_rhi:{},cd_uph:{}}; let total=0, basins=new Set();
   for(let x=x0;x<=x1;x++)for(let y=y0;y<=y1;y++){
@@ -432,7 +452,10 @@ async function classify(poly){
     const L2=vt.layers['apcac']; if(!L2)continue;
     for(let i=0;i<L2.length;i++){
       const f=L2.feature(i); const gj=f.toGeoJSON(x,y,z);
-      let inter; try{ inter=turf.intersect(poly,gj); }catch(e){ continue; }
+      // descarte barato antes do recorte caro: bbox que não encosta não intersecta
+      const fb=turf.bbox(gj);
+      if(fb[0]>bb[2]||fb[2]<bb[0]||fb[1]>bb[3]||fb[3]<bb[1]) continue;
+      let inter; try{ inter=turf.intersect(polyFast,gj); }catch(e){ continue; }
       if(!inter)continue;
       let a; try{ a=turf.area(inter); }catch(e){ continue; } if(!a||a<=0)continue;
       total+=a; basins.add(gj.properties.cobacia);
@@ -497,7 +520,8 @@ function renderResults(){
   const scaleRanks={cd_cerrado:rank(r.agg.cd_cerrado),cd_rhi:rank(r.agg.cd_rhi),cd_uph:rank(r.agg.cd_uph)};
   const rk=scaleRanks[currentScale]; const dom=rk[0];
   const isPrior=dom.prio!=='Regular';
-  const vcol=dom.cor;
+  // classe oculta não tem cor no mapa: cartão em cinza neutro, não numa cor de classe
+  const vcol=dom.oculta?'#8d8d8d':dom.cor;
   // verdict
   let html='<div class="verdict" style="background:linear-gradient(135deg,'+shade(vcol,-.12)+','+vcol+')">';
   html+='<div class="lbl">'+SCALE_NAME[currentScale]+'</div>';
@@ -507,9 +531,9 @@ function renderResults(){
   for(const sc of ['cd_cerrado','cd_rhi','cd_uph']){
     const list=scaleRanks[sc]; if(!list.length)continue;
     html+='<div class="scalecard"><div class="st">'+SCALE_NAME[sc]+'</div>';
-    html+='<div class="bar">'+list.map(c=>'<span data-w="'+c.pct.toFixed(1)+'" style="background:'+c.cor+'" title="'+c.prio+' '+c.pct.toFixed(1)+'%"></span>').join('')+'</div>';
+    html+='<div class="bar">'+list.map(c=>'<span data-w="'+c.pct.toFixed(1)+'" style="background:'+fundoCls(c)+'" title="'+c.prio+' '+c.pct.toFixed(1)+'%"></span>').join('')+'</div>';
     for(const c of list.slice(0,4)){
-      html+='<div class="classrow"><div class="sw" style="background:'+c.cor+'"></div><div class="cinfo"><div class="cprio">'+c.prio+'</div><div class="cmeta">'+c.acao+' · '+c.risco+'</div></div><div class="cpct">'+c.pct.toFixed(0)+'%</div></div>';
+      html+='<div class="classrow"><div class="sw" style="background:'+fundoCls(c)+'"></div><div class="cinfo"><div class="cprio">'+c.prio+'</div><div class="cmeta">'+c.acao+' · '+c.risco+'</div></div><div class="cpct">'+c.pct.toFixed(0)+'%</div></div>';
     }
     html+='</div>';
   }
