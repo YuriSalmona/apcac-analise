@@ -427,33 +427,6 @@ async function regionName(poly){
 }
 
 function contaVertices(c){ return Array.isArray(c[0][0]) ? c.reduce((s,p)=>s+contaVertices(p),0) : c.length; }
-// Recortar sub-bacia por sub-bacia é o que custa caro. A maioria delas está
-// INTEIRA dentro do polígono — nesses casos a área é a da própria sub-bacia e
-// não há o que recortar. Para saber isso barato, marcamos numa grade quais
-// células contêm algum trecho da BORDA do polígono: se o retângulo da sub-bacia
-// não toca nenhuma dessas células, ela não cruza a borda, logo está toda dentro
-// ou toda fora — e um único ponto decide qual. Só quem cruza a borda é recortado.
-function indiceBorda(poly,bb,n){
-  const cel=new Uint8Array(n*n);
-  const larg=(bb[2]-bb[0])/n||1e-9, alt=(bb[3]-bb[1])/n||1e-9;
-  const pols=poly.geometry.type==='Polygon'?[poly.geometry.coordinates]:poly.geometry.coordinates;
-  for(const pol of pols) for(const anel of pol) for(let i=0;i<anel.length-1;i++){
-    const ax=anel[i][0],ay=anel[i][1],bx=anel[i+1][0],by=anel[i+1][1];
-    let cx0=Math.max(0,Math.floor((Math.min(ax,bx)-bb[0])/larg)), cx1=Math.min(n-1,Math.floor((Math.max(ax,bx)-bb[0])/larg));
-    let cy0=Math.max(0,Math.floor((Math.min(ay,by)-bb[1])/alt)),  cy1=Math.min(n-1,Math.floor((Math.max(ay,by)-bb[1])/alt));
-    for(let cx=cx0;cx<=cx1;cx++) for(let cy=cy0;cy<=cy1;cy++) cel[cy*n+cx]=1;
-  }
-  return {cel,n,bb,larg,alt};
-}
-function cruzaBorda(ix,fb){
-  let cx0=Math.floor((fb[0]-ix.bb[0])/ix.larg), cx1=Math.floor((fb[2]-ix.bb[0])/ix.larg);
-  let cy0=Math.floor((fb[1]-ix.bb[1])/ix.alt),  cy1=Math.floor((fb[3]-ix.bb[1])/ix.alt);
-  if(cx1<0||cy1<0||cx0>ix.n-1||cy0>ix.n-1) return true;   // fora da grade: não arriscar
-  cx0=Math.max(0,cx0); cy0=Math.max(0,cy0); cx1=Math.min(ix.n-1,cx1); cy1=Math.min(ix.n-1,cy1);
-  for(let cx=cx0;cx<=cx1;cx++) for(let cy=cy0;cy<=cy1;cy++) if(ix.cel[cy*ix.n+cx]) return true;
-  return false;
-}
-function umPonto(g){ let c=g.coordinates; while(Array.isArray(c[0])) c=c[0]; return c; }
 async function classify(poly){
   const VT=await ensureVT();
   const bb=turf.bbox(poly), z=10;
@@ -473,7 +446,6 @@ async function classify(poly){
   }catch(e){}
   const x0=lon2t(bb[0],z),x1=lon2t(bb[2],z),y0=lat2t(bb[3],z),y1=lat2t(bb[1],z);
   const agg={cd_cerrado:{},cd_rhi:{},cd_uph:{}}; let total=0, basins=new Set();
-  const ixBorda=indiceBorda(polyFast,turf.bbox(polyFast),96);
   // 1) O retângulo do polígono cobre tiles que ele nem toca (bacia não é caixa).
   //    Descartar antes evita baixar e destrinchar tile à toa.
   const t2lon=(x)=>x/Math.pow(2,z)*360-180;
@@ -507,19 +479,9 @@ async function classify(poly){
       // descarte barato antes do recorte caro: bbox que não encosta não intersecta
       const fb=turf.bbox(gj);
       if(fb[0]>bb[2]||fb[2]<bb[0]||fb[1]>bb[3]||fb[3]<bb[1]) continue;
-      let a;
-      if(!cruzaBorda(ixBorda,fb)){
-        // não cruza a borda: dentro ou fora por inteiro — decide por um ponto
-        let dentro=false;
-        try{ dentro=turf.booleanPointInPolygon(umPonto(gj.geometry),polyFast); }catch(e){ dentro=false; }
-        if(!dentro) continue;
-        try{ a=turf.area(gj); }catch(e){ continue; }
-      } else {
-        let inter; try{ inter=turf.intersect(polyFast,gj); }catch(e){ continue; }
-        if(!inter)continue;
-        try{ a=turf.area(inter); }catch(e){ continue; }
-      }
-      if(!a||a<=0)continue;
+      let inter; try{ inter=turf.intersect(polyFast,gj); }catch(e){ continue; }
+      if(!inter)continue;
+      let a; try{ a=turf.area(inter); }catch(e){ continue; } if(!a||a<=0)continue;
       total+=a; basins.add(gj.properties.cobacia);
       for(const k of ['cd_cerrado','cd_rhi','cd_uph']){ const cd=gj.properties[k]; if(cd===undefined||cd===null||cd==='')continue; agg[k][cd]=(agg[k][cd]||0)+a; }
     }
