@@ -296,6 +296,7 @@ const RASTER={cd_cerrado:'cerrado_raster.pmtiles',cd_rhi:'rhi_raster.pmtiles',cd
 
 /* ============================ MAPA ============================ */
 let map, drawnLayer, rasterLayer, currentScale='cd_cerrado', lastResult=null, limRHI=null, layersCtl=null, cerBoundaryLayer=null;
+let cerBoundaryGeo=null;   // mesmo limite, guardado para teste geométrico
 const ESRI_ATTR='Esri, HERE, Garmin, © OpenStreetMap contributors';
 const carto=L.layerGroup([
   L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',{maxNativeZoom:16,maxZoom:20,attribution:ESRI_ATTR}),
@@ -357,6 +358,7 @@ async function loadCerradoBoundary(){
     if(!pieces.length)return;
     let u=pieces; try{ u=pc.union(...pieces.map(p=>[p])); }catch(e){}
     const gj={type:'Feature',properties:{},geometry:{type:'MultiPolygon',coordinates:u}};
+    cerBoundaryGeo=gj;
     cerBoundaryLayer=L.geoJSON(gj,{style:{color:'#004F23',weight:1.7,opacity:.95,fill:false,dashArray:'5,4'},interactive:false});
     cerBoundaryLayer.addTo(map);
     if(layersCtl) layersCtl.addOverlay(cerBoundaryLayer,'Limite do Cerrado (bioma)');
@@ -458,6 +460,23 @@ async function runAnalysis(geom,origem){
     const [res,region]=await Promise.all([classify(poly),regionName(poly)]);
     res.region=region; res.geom=poly; lastResult=res;
     if(res.total_ha<=0||Object.keys(res.agg.cd_cerrado).length===0){
+      // Nao achar classe NAO significa estar fora do bioma: as sub-bacias que sao
+      // Regular sem risco de aridez nas tres escalas foram retiradas dos tiles
+      // vetoriais (nao sao pintadas em lugar nenhum). Distinguir os dois casos
+      // pelo limite do bioma, que a pagina ja carrega para desenhar o contorno.
+      let dentroCerrado=null;
+      if(cerBoundaryGeo){ try{ dentroCerrado=turf.booleanIntersects(poly,cerBoundaryGeo); }catch(e){ dentroCerrado=null; } }
+      if(dentroCerrado){
+        setStatus('Área inteiramente em classes de importância regular.');
+        document.getElementById('results').innerHTML=
+          '<div class="res-empty"><span class="big lead">Regular sem risco de aridez</span>'+
+          'O polígono está dentro do Cerrado, em sub-bacias classificadas como de importância hidrológica '+
+          'regular nas três escalas de análise — a única classe que não é apresentada no mapa.</div>'+
+          '<div class="callout"><b>Sobre a prioridade regular.</b> '+REGULAR_TXT+'</div>';
+        document.getElementById('scaletabs').style.display='none';
+        saveAnalysis(res,origem);
+        return;
+      }
       setStatus('Fora da área de análise (Cerrado).',true);
       document.getElementById('results').innerHTML='<div class="res-empty"><span class="big">Fora do Cerrado</span>O polígono não intercepta as sub-bacias analisadas pela APIAC. A ferramenta cobre a zona de influência hidrológica do bioma Cerrado.</div>';
       document.getElementById('scaletabs').style.display='none';
