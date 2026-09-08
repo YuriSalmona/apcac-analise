@@ -483,7 +483,7 @@ async function runAnalysis(geom,origem){
       saveAnalysis(res,origem);
       return;
     }
-    setStatus('Análise concluída — '+res.nbasins+' sub-bacia(s), '+fmt(res.total_ha)+' ha.');
+    setStatus('Análise concluída — '+res.nbasins+' sub-bacia(s), '+fmt(res.total_ha)+' ha classificados.');
     saveAnalysis(res,origem);
     document.getElementById('scaletabs').style.display='flex';
     renderResults();
@@ -542,8 +542,11 @@ function scaleParagraph(scaleKey,list){
 }
 function buildText(r,ranks){
   let h='';
+  // area REAL do poligono (geodesica). r.total_ha e outra coisa: a soma das
+  // sub-bacias que a ferramenta enxerga, que nao inclui as classes ocultas.
+  let areaPoly=null; try{ areaPoly=turf.area(r.geom)/10000; }catch(e){}
   h+='<h4>Localização</h4>';
-  let loc='O polígono analisado, com área aproximada de <b>'+fmt(r.total_ha)+' ha</b>, ';
+  let loc='O polígono analisado, com área aproximada de <b>'+fmt(areaPoly||r.total_ha)+' ha</b>, ';
   if(r.region){ loc+='situa-se na porção cerratense da Região Hidrográfica '+(REGION_DISPLAY[r.region]||r.region)+'. '+(RHI_NOTE[r.region]||''); }
   else { loc+='situa-se na zona de influência hidrológica do bioma Cerrado.'; }
   h+='<p>'+loc+'</p>';
@@ -564,6 +567,20 @@ function buildText(r,ranks){
   const anyRegularDom=['cd_cerrado','cd_rhi','cd_uph'].some(k=>ranks[k][0].prio==='Regular');
   if(anyRegularDom){
     h+='<div class="callout"><b>Sobre a prioridade regular.</b> '+REGULAR_TXT+'</div>';
+  }
+  // O que a analise cobre: as sub-bacias de importancia regular sem risco de
+  // aridez nas tres escalas nao estao nos dados vetoriais, entao nao entram nos
+  // totais. Declarar isso, com o quanto ficou de fora, em vez de deixar o
+  // usuario supor que o total e a area dele.
+  if(areaPoly && areaPoly>0){
+    const cob=r.total_ha/areaPoly;
+    if(cob<0.98){
+      h+='<div class="callout"><b>O que esta análise cobre.</b> O polígono tem cerca de '+fmt(areaPoly)+
+         ' ha, dos quais <b>'+fmt(r.total_ha)+' ha ('+(cob*100).toFixed(0)+'%)</b> estão em sub-bacias com classe '+
+         'apresentada no mapa — e é a essa parte que se referem todos os números e percentuais acima. '+
+         'O restante está em sub-bacias de importância hidrológica regular sem risco de aridez, a única classe '+
+         'que não é apresentada no mapa, ou fora do bioma Cerrado.</div>';
+    }
   }
   return h;
 }
@@ -599,6 +616,26 @@ function poligonosDe(fc){
   }
   return out;
 }
+// .zip pode trazer .kmz dentro (e o .kmz é outro zip): procurar o .kml
+// atravessando os containers, senão um arquivo legítimo é recusado.
+async function inspecionaZip(buf,prof){
+  let z;
+  try{ z=await window.JSZip.loadAsync(buf); }
+  catch(e){ return {abriu:false,kml:null,shpRaiz:false,shpAninhado:false}; }
+  const nomes=Object.keys(z.files).filter(n=>!z.files[n].dir);
+  const alvo=nomes.find(n=>/\.kml$/i.test(n));
+  if(alvo) return {abriu:true,kml:await z.files[alvo].async('string'),shpRaiz:false,shpAninhado:false};
+  const shpAqui=nomes.some(n=>/\.shp$/i.test(n));
+  let shpAninhado=false;
+  if(prof<3){
+    for(const n of nomes.filter(n=>/\.(kmz|zip)$/i.test(n))){
+      const r=await inspecionaZip(await z.files[n].async('arraybuffer'),prof+1);
+      if(r.kml) return r;
+      shpAninhado=shpAninhado||r.shpRaiz||r.shpAninhado;
+    }
+  }
+  return {abriu:true,kml:null,shpRaiz:prof===0&&shpAqui,shpAninhado:shpAninhado||(prof>0&&shpAqui)};
+}
 async function handleZip(f){
   try{
     const nome=(f.name||'').toLowerCase();
@@ -609,19 +646,18 @@ async function handleZip(f){
       await ensureKML(); fc=kmlParaGeo(new TextDecoder().decode(buf));
     } else {
       // .zip e .kmz são o mesmo container: olha dentro antes de decidir o leitor
-      let kmlTxt=null, temShp=null;
-      try{
-        const z=await window.JSZip.loadAsync(buf);
-        const dentro=Object.keys(z.files).filter(n=>!z.files[n].dir);
-        const alvo=dentro.find(n=>/\.kml$/i.test(n));
-        temShp=dentro.some(n=>/\.shp$/i.test(n));
-        if(alvo) kmlTxt=await z.files[alvo].async('string');
-        // shpjs erra em inglês ("no layers founds"); avisar antes, em português
-        if(!alvo && !temShp){
+      const achado=await inspecionaZip(buf,0);
+      const kmlTxt=achado.kml;
+      if(!kmlTxt && achado.abriu){
+        if(achado.shpAninhado){
+          setStatus('O shapefile está dentro de outra pasta compactada. Envie um .zip com .shp, .shx, .dbf e .prj na raiz.',true);
+          return;
+        }
+        if(!achado.shpRaiz){
           setStatus('O arquivo não tem .shp nem .kml dentro. Envie um shapefile (.shp, .shx, .dbf e .prj no mesmo .zip) ou um KML/KMZ.',true);
           return;
         }
-      }catch(e){ /* não abriu como zip: segue para o shapefile, que dá a mensagem certa */ }
+      }
       if(kmlTxt){ await ensureKML(); fc=kmlParaGeo(kmlTxt); }
       else {
         const gj=await shp(buf); // FeatureCollection or array
