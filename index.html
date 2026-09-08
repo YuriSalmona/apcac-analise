@@ -245,7 +245,7 @@ const LEG={
  IICC:['#ffba00','antrópica','Alta','Manejo do Solo e Revezamento Hídrico','Risco de Aridez'],
  XC:['#ffdd81','mista','Regular','Conjunto de Ações Diversas','Risco de Aridez'],
 };
-function cls(cd){ const v=LEG[cd]; if(!v) return {cd:cd||'—',cor:'#e8e8e8',pred:'—',prio:'Regular',acao:'Sem categoria de prioridade',risco:'Risco padrão de perda de vazão'}; return {cd,cor:v[0],pred:v[1],prio:v[2],acao:v[3],risco:v[4]}; }
+function cls(cd){ const v=LEG[cd]; if(!v) return {cd:cd||'—',cor:'#e8e8e8',pred:'—',prio:'Regular',acao:'Sem ação prioritária associada',risco:'Risco padrão de perda de vazão'}; return {cd,cor:v[0],pred:v[1],prio:v[2],acao:v[3],risco:v[4]}; }
 const PRIO_ORDER={'Extremamente Alta':4,'Muito Alta':3,'Alta':2,'Regular':1};
 
 // Caracterização de cada Região Hidrográfica (extraída da nota técnica — sem conhecimento novo)
@@ -282,7 +282,7 @@ const ACAO_TXT={
  'Restauração Ecológica':'a ação predominante é a Restauração Ecológica, indicada para bacias predominantemente antropizadas. Na aplicação, essas áreas orientam a condução da regeneração natural, a restauração ecológica e a recomposição de Áreas de Preservação Permanente e de Reserva Legal (Lei nº 12.651/2012; Lei nº 14.653/2023), além dos Programas de Regularização Ambiental e das ações de revitalização de bacias',
  'Manejo do Solo e Revezamento Hídrico':'a ação predominante é o Manejo do Solo e Revezamento Hídrico, voltada às áreas sob risco de aridez e déficit de umidade, onde se recomendam o manejo do solo e o revezamento d’água',
  'Conjunto de Ações Diversas':'a indicação é de um Conjunto de Ações Diversas, correspondente a bacias de predominância mista sob risco de aridez e prioridade hidrológica regular, que reúnem combinações das ações anteriores',
- 'Sem categoria de prioridade':'não há categoria de ação prioritária associada, por se tratar de bacia de importância hidrológica regular nesta escala'
+ 'Sem ação prioritária associada':'não há categoria de ação prioritária associada, por se tratar de bacia de importância hidrológica regular nesta escala'
 };
 const PRED_TXT={'natural':'de predominância de vegetação nativa (ao menos 60% de cobertura nativa)','antrópica':'de predominância de cobertura antropizada (menos de 60% de vegetação nativa)','mista':'de predominância mista','—':''};
 
@@ -317,7 +317,7 @@ function initMap(){
     {a:'Restauração Ecológica',r:'Risco Padrão',c:['#1f3a70','#376ea0','#458ea0']},
     {a:'Manejo do Solo e Revezamento Hídrico',r:'Risco de Aridez',c:['#ff9400','#ffa700','#ffba00']},
   ];
-  const LEGSINGLE=[{a:'Conjunto de Ações Diversas',r:'Risco de Aridez',c:'#ffdd81'},{a:'Sem categoria',r:'importância hidrológica regular',c:'#e8e8e8'}];
+  const LEGSINGLE=[{a:'Conjunto de Ações Diversas',r:'Risco de Aridez',c:'#ffdd81'},{a:'Regular sem risco de aridez',r:'não apresentada no mapa',c:'transparent'}];
   const SUBL=['Extremamente Alta','Muito Alta','Alta'];
   const lg=L.control({position:'bottomright'});
   lg.onAdd=function(){const d=L.DomUtil.create('div','leg');
